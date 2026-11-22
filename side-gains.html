@@ -1,0 +1,1830 @@
+<title>Side Gains</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky scoreboard header; Today = big quest card + side rail (submit, finishers), vote queue below; Leaderboard and Log as tabs. */
+:root {
+  --bg: #eceff3;
+  --surface: #ffffff;
+  --surface-2: #f5f7fa;
+  --ink: #11161d;
+  --muted: #5a6574;
+  --line: #d5dbe3;
+  --accent: #1d4ed8;
+  --accent-ink: #ffffff;
+  --good: #15803d;
+  --bad: #c81e2a;
+  --warn: #a16207;
+  --r-common: #64707f;
+  --r-rare: #1f74d6;
+  --r-epic: #7c3aed;
+  --r-legendary: #c27803;
+  --water: #0ea5e9;
+  --shadow: 0 1px 2px rgba(17,22,29,.06), 0 6px 24px rgba(17,22,29,.06);
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --f-body: "Barlow", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117; --surface: #151b23; --surface-2: #1b222c; --ink: #e7ecf2; --muted: #93a0b0; --line: #29313c;
+    --accent: #6b93ff; --accent-ink: #0b1020; --good: #3fbf78; --bad: #ff6b72; --warn: #e3a33b;
+    --r-common: #8c97a6; --r-rare: #4c9bff; --r-epic: #a878ff; --r-legendary: #f2ac2e; --water: #4fc3f7;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 24px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1117; --surface: #151b23; --surface-2: #1b222c; --ink: #e7ecf2; --muted: #93a0b0; --line: #29313c;
+  --accent: #6b93ff; --accent-ink: #0b1020; --good: #3fbf78; --bad: #ff6b72; --warn: #e3a33b;
+  --r-common: #8c97a6; --r-rare: #4c9bff; --r-epic: #a878ff; --r-legendary: #f2ac2e; --water: #4fc3f7;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 24px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.1; }
+h2 { font-size: 1.45rem; text-transform: uppercase; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top-in { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding-block: 10px; }
+.brand { font-family: var(--f-display); font-weight: 800; font-size: 1.6rem; letter-spacing: .02em; line-height: 1; }
+.brand span { color: var(--accent); margin-left: 4px; }
+.tabs { display: flex; gap: 4px; flex: 1; min-width: 0; }
+.tabs a { font-family: var(--f-display); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 1rem; text-decoration: none; color: var(--muted); padding: 6px 12px; border-radius: 6px; position: relative; }
+.tabs a:hover { color: var(--ink); background: var(--surface-2); }
+.tabs a[aria-current="page"] { color: var(--ink); background: var(--surface-2); }
+.tabs a .dot { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px; background: var(--bad); color: #fff; font-family: var(--f-body); font-size: .72rem; font-weight: 700; letter-spacing: 0; vertical-align: 2px; }
+.me { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.me button { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 4px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.me button:hover { border-color: var(--muted); }
+.av { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-family: var(--f-display); font-weight: 800; font-size: .9rem; color: #fff; flex: none; }
+.av.lg { width: 34px; height: 34px; font-size: 1.1rem; }
+
+main { padding-block: 20px 56px; display: grid; gap: 20px; }
+.notice { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 14px; color: var(--muted); background: var(--surface); }
+.notice strong { color: var(--ink); }
+
+/* today */
+.today-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 880px) { .today-grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; } }
+.quest { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; --r: var(--r-common); }
+.quest[data-r="rare"] { --r: var(--r-rare); }
+.quest[data-r="epic"] { --r: var(--r-epic); }
+.quest[data-r="legendary"] { --r: var(--r-legendary); }
+.q-band { background: color-mix(in srgb, var(--r) 14%, var(--surface)); color: var(--r); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 20px; font-family: var(--f-display); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .95rem; }
+.q-band .when { color: var(--muted); letter-spacing: .04em; }
+.pips { display: inline-flex; gap: 3px; margin-right: 8px; vertical-align: 1px; }
+.pips i { width: 8px; height: 8px; transform: rotate(45deg); background: var(--r); opacity: .25; display: block; }
+.pips i.on { opacity: 1; }
+.q-body { padding: 18px 20px 22px; display: grid; gap: 16px; }
+.q-big { display: flex; align-items: baseline; gap: 4px 14px; flex-wrap: wrap; }
+.q-big .n { font-family: var(--f-display); font-weight: 800; font-size: clamp(4rem, 15vw, 7.5rem); line-height: .85; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.q-big .u { font-family: var(--f-display); font-weight: 700; font-size: clamp(1.6rem, 5vw, 2.6rem); text-transform: uppercase; line-height: 1; color: var(--r); }
+.q-big.long .n { font-size: clamp(2.6rem, 9vw, 4.4rem); }
+.q-big.long .u { font-size: clamp(1.1rem, 3.4vw, 1.5rem); color: var(--ink); text-transform: none; font-family: var(--f-body); font-weight: 600; flex-basis: 100%; }
+.q-rules { margin: 0; max-width: 62ch; }
+.q-proof { margin: 0; color: var(--muted); max-width: 62ch; }
+.q-proof b { color: var(--ink); }
+.q-meta > div { flex: 1 1 92px; }
+.quest[data-r="common"] .q-figs { --fig-hi: var(--accent); }
+.q-meta { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 0; }
+.q-meta div { background: var(--surface-2); padding: 8px 12px; }
+.q-meta dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.q-meta dd { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+.q-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tag { font-size: .75rem; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+
+.side { display: grid; gap: 20px; min-width: 0; }
+.panel { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 18px 20px; display: grid; gap: 14px; min-width: 0; }
+.panel-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.panel-h .sub { color: var(--muted); font-size: .85rem; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+
+/* forms */
+.field { display: grid; gap: 6px; }
+.field label { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+input[type="text"], input[type="url"], select, textarea { width: 100%; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+textarea { resize: vertical; min-height: 64px; }
+input[type="file"] { width: 100%; font-size: .9rem; }
+.drop { border: 1.5px dashed var(--line); border-radius: 10px; padding: 14px; background: var(--surface-2); display: grid; gap: 6px; }
+.drop.has { border-color: var(--accent); }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.big { padding: 12px 18px; font-family: var(--f-display); font-size: 1.15rem; text-transform: uppercase; letter-spacing: .05em; }
+.btn[disabled] { opacity: .55; cursor: progress; }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+.btn.ghost:hover { color: var(--ink); background: var(--surface-2); }
+.btn.yes[aria-pressed="true"] { background: var(--good); border-color: var(--good); color: #fff; }
+.btn.no[aria-pressed="true"] { background: var(--bad); border-color: var(--bad); color: #fff; }
+.err { color: var(--bad); font-size: .9rem; margin: 0; }
+.bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+
+/* status chips */
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 2px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.approved { color: var(--good); }
+.chip.rejected { color: var(--bad); }
+.chip.pending { color: var(--warn); }
+
+/* finishers */
+.fin { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.fin li { display: grid; grid-template-columns: 34px 28px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.fin li:last-child { border-bottom: 0; }
+.place { font-family: var(--f-display); font-weight: 800; font-size: 1.3rem; text-align: center; color: var(--muted); }
+.place.p1 { color: var(--r-legendary); }
+.place.p2 { color: var(--r-common); }
+.place.p3 { color: #a5622f; }
+.who { min-width: 0; }
+.who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who span { font-size: .8rem; color: var(--muted); }
+.pts { font-family: var(--f-display); font-weight: 700; font-size: 1.2rem; text-align: right; font-variant-numeric: tabular-nums; }
+.right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; cursor: pointer; font-size: .85rem; text-decoration: underline; text-underline-offset: 2px; }
+
+/* my status */
+.mine { display: grid; gap: 10px; }
+.mine .big { font-family: var(--f-display); font-weight: 800; font-size: 2.4rem; line-height: 1; }
+
+/* queue */
+.queue { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.vc { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: grid; background: var(--surface); min-width: 0; }
+.vc.voted { opacity: .8; }
+.vc-media { background: #000; aspect-ratio: 9 / 12; max-height: 360px; width: 100%; max-width: 100%; display: grid; place-items: center; }
+.vc-media video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.vc-media.linkonly { background: var(--surface-2); aspect-ratio: auto; padding: 22px 16px; }
+.vc-body { padding: 12px 14px 14px; display: grid; gap: 10px; }
+.vc-top { display: flex; gap: 10px; align-items: center; }
+.vc-top .who b { font-size: 1rem; }
+.vc-note { margin: 0; font-size: .9rem; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; overflow-wrap: anywhere; }
+.tally { display: flex; justify-content: space-between; font-size: .85rem; color: var(--muted); gap: 8px; flex-wrap: wrap; }
+.vbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* leaderboard */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--surface-2); }
+.seg button { border: 0; background: none; padding: 5px 12px; border-radius: 6px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.pod { background: var(--surface-2); border-radius: 10px; padding: 12px 10px; text-align: center; display: grid; gap: 4px; justify-items: center; min-width: 0; }
+.pod.p1 { padding-block: 22px; background: color-mix(in srgb, var(--r-legendary) 14%, var(--surface)); }
+.pod .nm { font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod .pp { font-family: var(--f-display); font-weight: 800; font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.pod .pl { font-family: var(--f-display); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .8rem; color: var(--muted); }
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.r, th.r { text-align: right; }
+tr.isme td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+td .nmcell { display: flex; align-items: center; gap: 10px; }
+td .bigpts { font-family: var(--f-display); font-weight: 800; font-size: 1.3rem; }
+.rules-list { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; max-width: 70ch; }
+.rules-list b { color: var(--ink); }
+
+/* log */
+.days { display: grid; gap: 10px; }
+.day { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 14px; background: var(--surface); border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow); --r: var(--r-common); }
+.day[data-r="rare"] { --r: var(--r-rare); }
+.day[data-r="epic"] { --r: var(--r-epic); }
+.day[data-r="legendary"] { --r: var(--r-legendary); }
+.day .d { font-family: var(--f-display); font-weight: 700; text-transform: uppercase; line-height: 1.05; color: var(--muted); }
+.day .d b { display: block; font-size: 1.9rem; color: var(--ink); }
+.day h3 { font-size: 1.25rem; }
+.day h3 small { font-family: var(--f-body); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--r); margin-left: 8px; vertical-align: 2px; }
+.day .fins { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fchip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px 2px 3px; font-size: .85rem; background: var(--surface-2); cursor: pointer; max-width: 100%; }
+.fchip .av { width: 20px; height: 20px; font-size: .7rem; }
+.fchip.rejected { text-decoration: line-through; opacity: .6; }
+.fchip.pending { border-style: dashed; }
+
+/* punishments */
+.penance { outline: 2px solid var(--bad); outline-offset: -2px; }
+.penance h2 { color: var(--bad); }
+.pen-task { font-family: var(--f-display); font-weight: 800; font-size: 1.9rem; line-height: 1.05; text-transform: uppercase; }
+.danger { margin: 0 0 6px; padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, var(--bad) 10%, var(--surface)); }
+.danger b { color: var(--bad); }
+.pen-fin li { grid-template-columns: 28px minmax(0, 1fr) auto; }
+.who span { overflow-wrap: anywhere; }
+
+.ideas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ideas li { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.ideas li.lead { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 6%, var(--surface)); }
+.ideas .votes { text-align: center; font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); line-height: 1.1; }
+.ideas .votes b { display: block; font-family: var(--f-display); font-size: 1.7rem; color: var(--ink); }
+.ideas .it { white-space: normal; font-size: 1.02rem; }
+.ideas .ir { display: block; color: var(--ink); opacity: .8; font-size: .85rem; }
+.ideas em { color: var(--bad); font-style: normal; font-weight: 700; }
+
+/* modal + toast */
+.modal { position: fixed; inset: 0; z-index: 50; background: rgba(5,8,12,.62); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.modal-box { background: var(--surface); border-radius: 14px; width: min(560px, 100%); max-height: 100%; overflow: auto; padding: 18px 20px; display: grid; gap: 14px; }
+.modal-box video { width: 100%; max-height: 70vh; background: #000; border-radius: 8px; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 60; max-width: calc(100% - 32px); box-shadow: var(--shadow); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row.end { justify-content: flex-end; }
+.grid2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+/* tabs scroll on narrow screens */
+.tabs { overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a { white-space: nowrap; flex: none; }
+
+/* entrance */
+@keyframes rise { from { transform: translateY(10px); opacity: .35; } to { transform: none; opacity: 1; } }
+main > section:not([hidden]) { animation: rise .45s cubic-bezier(.2,.8,.2,1) both; }
+
+/* exercise figures */
+.fig { width: 100%; height: auto; display: block; overflow: hidden; }
+.lib-fig .fig, .q-figs .fig { height: 140px; }
+.coach-fig .fig { height: 150px; }
+.modal-box .coach-fig .fig { height: 220px; }
+.fig .limb { fill: none; stroke: var(--ink); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.fig .far .limb { stroke: var(--muted); opacity: .5; }
+.fig .head { fill: var(--ink); }
+.fig.hi-legs .near .leg, .fig.hi-arms .near .arm, .fig.hi-core .near .torso, .fig.hi-full .near .limb { stroke: var(--fig-hi, var(--accent)); }
+.fig.hi-legs .far .leg, .fig.hi-arms .far .arm, .fig.hi-full .far .limb { stroke: var(--fig-hi, var(--accent)); }
+.fig .gnd { stroke: var(--line); stroke-width: 2; }
+.fig .mat { fill: color-mix(in srgb, var(--fig-hi, var(--accent)) 16%, var(--surface-2)); }
+.fig .prop { fill: var(--surface-2); stroke: var(--muted); stroke-width: 2; }
+.fig .prop-l { stroke: var(--muted); stroke-width: 3; stroke-linecap: round; }
+.fig .shadow { fill: var(--ink); opacity: .08; }
+
+/* quest hero with demo */
+.quest { position: relative; }
+.q-band { position: relative; }
+.q-band::after { content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: var(--dayp, 0%); background: var(--r); transition: width 1s linear; }
+.q-hero { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); align-items: center; }
+@media (min-width: 600px) { .q-hero { grid-template-columns: minmax(0, 1fr) minmax(0, .95fr); } }
+.q-figs { --fig-hi: var(--r); display: grid; gap: 6px; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); border-radius: 12px; padding: 10px 8px 6px; background: radial-gradient(ellipse at 50% 70%, color-mix(in srgb, var(--r) 18%, transparent), transparent 70%); }
+.q-figs button { border: 0; background: none; padding: 0; margin: 0; display: grid; gap: 2px; justify-items: center; cursor: pointer; border-radius: 10px; }
+.q-figs button:hover .figcap { color: var(--ink); }
+.figcap { font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
+@property --ang { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.quest[data-r="epic"]::after, .quest[data-r="legendary"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px; pointer-events: none; background: conic-gradient(from var(--ang), var(--r), transparent 25%, transparent 45%, var(--r) 55%, transparent 75%, var(--r)); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: spin 5s linear infinite; }
+.quest[data-r="legendary"] { box-shadow: var(--shadow), 0 0 40px -8px color-mix(in srgb, var(--r) 55%, transparent); }
+@keyframes spin { to { --ang: 360deg; } }
+
+/* coach */
+.coach-items { display: grid; gap: 18px; }
+.coach-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (min-width: 640px) { .coach-item { grid-template-columns: 200px minmax(0, 1fr); } }
+.coach-fig { background: var(--surface-2); border-radius: 12px; padding: 8px; max-width: 280px; }
+.coach-item h3 { font-size: 1.35rem; text-transform: uppercase; }
+.cues { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.cues li { padding-left: 24px; position: relative; }
+.cues li::before { content: ""; position: absolute; left: 2px; top: .38em; width: 11px; height: 11px; border-radius: 50%; border: 2.5px solid var(--good); }
+.cues.bad li::before { border-color: var(--bad); border-radius: 2px; transform: rotate(45deg) scale(.85); }
+.cue-h { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 4px 0 2px; }
+.breathline { font-size: .88rem; color: var(--muted); margin: 0; }
+.muscles { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* form library */
+.lib { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+.lib-card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px 16px; display: grid; gap: 8px; cursor: pointer; border: 1px solid transparent; text-align: left; transition: transform .2s, border-color .2s; }
+.lib-card:hover { border-color: var(--line); transform: translateY(-2px); }
+.lib-fig { background: var(--surface-2); border-radius: 10px; padding: 6px; }
+.lib-card h3 { font-size: 1.3rem; text-transform: uppercase; }
+.lib-card p { margin: 0; color: var(--muted); font-size: .88rem; }
+
+/* life */
+.life-grid { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 880px) { .life-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; } }
+.habits { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 620px) { .habits { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.habit { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 4px; background: var(--surface); cursor: pointer; text-align: left; color: var(--muted); transition: transform .15s, border-color .2s, background .25s, color .2s; }
+.habit:hover { transform: translateY(-1px); border-color: var(--muted); }
+.habit[aria-pressed="true"] { border-color: var(--good); background: color-mix(in srgb, var(--good) 11%, var(--surface)); color: var(--good); }
+.habit svg { width: 26px; height: 26px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.habit .hn { font-weight: 700; color: var(--ink); }
+.habit .hs { font-size: .78rem; color: var(--muted); }
+.habit[aria-pressed="true"] svg { animation: pop .35s cubic-bezier(.3,1.6,.5,1); }
+@keyframes pop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
+.water { display: flex; gap: 6px; flex-wrap: wrap; align-items: end; }
+.glass { width: 32px; height: 42px; border: 0; background: none; padding: 0; cursor: pointer; }
+.glass svg { width: 100%; height: 100%; display: block; }
+.glass .g-out { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linejoin: round; }
+.glass .g-in { fill: var(--water); transform-box: fill-box; transform-origin: 50% 100%; transform: scaleY(0); transition: transform .45s cubic-bezier(.3,1.5,.5,1); }
+.glass.on .g-in { transform: scaleY(1); }
+.glass.on .g-out { stroke: var(--water); }
+.score-ring { display: flex; align-items: center; gap: 14px; }
+.score-ring svg { width: 64px; height: 64px; transform: rotate(-90deg); flex: none; }
+.score-ring .rb { fill: none; stroke: var(--surface-2); stroke-width: 7; }
+.score-ring .rf { fill: none; stroke: var(--good); stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1); }
+.score-ring b { font-family: var(--f-display); font-size: 2rem; line-height: 1; }
+.hgrid { display: grid; gap: 6px; }
+.hrow { display: grid; grid-template-columns: minmax(0, 1fr) repeat(7, 22px); gap: 5px; align-items: center; }
+.hrow .who b { font-size: .9rem; }
+.hcell { width: 22px; height: 22px; border-radius: 6px; background: var(--surface-2); }
+.hhead { font-size: .68rem; color: var(--muted); text-align: center; text-transform: uppercase; font-weight: 600; }
+.breathe-box { display: grid; place-items: center; gap: 14px; padding-block: 8px; }
+.bstage { width: 190px; height: 190px; display: grid; place-items: center; position: relative; max-width: 100%; }
+.bring { position: absolute; inset: 0; border-radius: 50%; border: 2px dashed var(--line); }
+.bcircle { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; align-content: center; text-align: center; background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--accent) 45%, var(--surface)), color-mix(in srgb, var(--accent) 12%, var(--surface))); transform: scale(.55); transition: transform 4s cubic-bezier(.45,0,.55,1); }
+.bcircle.big { transform: scale(1); }
+.bcircle b { font-family: var(--f-display); font-size: 1.4rem; text-transform: uppercase; letter-spacing: .06em; }
+.bcircle span { font-family: var(--f-display); font-size: 2.2rem; font-weight: 800; line-height: 1; }
+.tip { display: grid; gap: 6px; }
+.tip .tip-t { font-family: var(--f-display); font-weight: 700; font-size: 1.35rem; line-height: 1.15; }
+.posture { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 560px) { .posture { grid-template-columns: 170px minmax(0, 1fr); align-items: center; } }
+
+/* charts */
+.race svg { width: 100%; height: auto; display: block; }
+.race .gl { stroke: var(--line); stroke-width: 1; }
+.race text { fill: var(--muted); font-size: 11px; font-family: var(--f-body); }
+.race .ln { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: draw 1.2s cubic-bezier(.2,.8,.2,1) forwards; }
+.race text.lbl { font-weight: 700; fill: var(--ink); font-size: 12px; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.heat { overflow-x: auto; padding-bottom: 4px; }
+.heat-wrap { display: flex; gap: 8px; width: max-content; }
+.heat-days { display: grid; grid-template-rows: repeat(7, 14px); gap: 3px; font-size: .62rem; color: var(--muted); line-height: 14px; }
+.heat-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 14px); grid-auto-columns: 14px; gap: 3px; }
+.heat-grid i { border-radius: 3px; background: var(--surface-2); display: block; }
+.heat-grid i.today { outline: 2px solid var(--accent); outline-offset: 1px; }
+.legend { display: flex; gap: 4px; align-items: center; font-size: .75rem; color: var(--muted); }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 70; }
+.modal-box .coach-fig { max-width: none; }
+
+@media (max-width: 520px) {
+  .top-in { gap: 8px 12px; }
+  .tabs { order: 3; flex-basis: 100%; }
+  .tabs a { padding: 6px 10px; font-size: .95rem; }
+  .q-band, .q-body, .panel { padding-left: 16px; padding-right: 16px; }
+  .day { grid-template-columns: 56px minmax(0, 1fr); padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } .race .ln { stroke-dashoffset: 0; } }
+</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand" aria-label="Side Gains">SIDE<span>GAINS</span></div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#today" data-view="today">Today<span class="dot" id="vote-dot" hidden></span></a>
+      <a href="#board" data-view="board">Leaderboard</a>
+      <a href="#punish" data-view="punish">Punishment<span class="dot" id="idea-dot" hidden></span></a>
+      <a href="#form" data-view="form">Form</a>
+      <a href="#life" data-view="life">Life</a>
+      <a href="#log" data-view="log">Log</a>
+    </nav>
+    <div class="me" id="me"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="notice" id="status-note" hidden></div>
+
+  <section id="v-today" data-view="today">
+    <div class="today-grid">
+      <article class="quest" id="quest" aria-label="Today's quest"></article>
+      <div class="side">
+        <section class="panel penance" id="penance" aria-label="Your punishment" hidden></section>
+        <section class="panel" id="submit" aria-label="Your submission"></section>
+        <section class="panel" id="finishers" aria-label="Today's finishers"></section>
+      </div>
+    </div>
+    <section class="panel" id="coach" aria-label="Form coach" style="margin-top:20px"></section>
+  </section>
+
+  <section class="panel" id="queue-wrap" data-view="today" aria-label="Votes">
+    <div class="panel-h">
+      <h2>Judge the tape</h2>
+      <span class="sub" id="queue-sub"></span>
+    </div>
+    <div class="queue" id="queue"></div>
+  </section>
+
+  <section id="v-board" data-view="board" hidden>
+    <div class="panel">
+      <div class="panel-h">
+        <h2>Leaderboard</h2>
+        <div class="seg" role="group" aria-label="Range">
+          <button type="button" id="rng-week" aria-pressed="true">This week</button>
+          <button type="button" id="rng-all" aria-pressed="false">All time</button>
+        </div>
+      </div>
+      <div class="podium" id="podium"></div>
+      <div class="tbl-wrap"><table id="board-table"></table></div>
+    </div>
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-h"><h2>The weekly race</h2><span class="sub">Points piling up, Monday to Sunday</span></div>
+      <div class="race" id="race"></div>
+    </div>
+  </section>
+
+  <section id="v-form" data-view="form" hidden>
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-h"><h2>Form library</h2><span class="sub">Tap any move for the full breakdown</span></div>
+      <p class="muted" style="margin:0;max-width:70ch">Clean reps are the only reps that count. The highlighted limbs show where the work happens. Watch the demo, read the cues, then film yourself from the side so the judges can see your depth.</p>
+    </div>
+    <div class="lib" id="lib"></div>
+  </section>
+
+  <section id="v-life" data-view="life" hidden>
+    <div class="life-grid">
+      <div style="display:grid;gap:20px;min-width:0">
+        <section class="panel" id="habits-panel" aria-label="Daily habits"></section>
+        <section class="panel" aria-label="Crew habits">
+          <div class="panel-h"><h2>Crew habits</h2><span class="sub">Last 7 days</span></div>
+          <div id="crew-habits"></div>
+        </section>
+      </div>
+      <div class="side">
+        <section class="panel" aria-label="Breathing">
+          <div class="panel-h"><h2>Box breathing</h2><span class="sub">4 in · 4 hold · 4 out · 4 hold</span></div>
+          <div class="breathe-box">
+            <div class="bstage"><div class="bring"></div><div class="bcircle" id="bcircle"><b id="bphase">Ready</b><span id="bcount">4</span></div></div>
+            <button type="button" class="btn primary" id="bbtn">Start 2-minute session</button>
+            <p class="muted small" style="margin:0;text-align:center;max-width:36ch">Use it after a hard set or before sleep. It slows your heart rate and calms you down.</p>
+          </div>
+        </section>
+        <section class="panel tip" id="tip" aria-label="Tip of the day"></section>
+        <section class="panel" aria-label="Posture">
+          <div class="panel-h"><h2>Posture reset</h2><span class="sub">Do it every hour you sit</span></div>
+          <div class="posture">
+            <div class="coach-fig" id="posture-fig"></div>
+            <ul class="cues">
+              <li>Stack your ears over your shoulders, and your shoulders over your hips.</li>
+              <li>Draw your shoulder blades back and down, as if putting them in your back pockets.</li>
+              <li>Tuck your chin slightly, like making a double chin, and hold for 5 seconds.</li>
+              <li>Raise your screen and your phone to eye level instead of dropping your head.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-punish" data-view="punish" hidden>
+    <div class="today-grid">
+      <div class="panel">
+        <div class="panel-h"><h2>Vote this week's punishment</h2><span class="sub">Voting closes Sunday midnight · <span id="week-countdown" class="num"></span></span></div>
+        <p class="muted small" style="margin:0">Everyone pitches one punishment. The most-voted idea is what this week's last place has to film. You can't vote for your own.</p>
+        <div id="danger-line"></div>
+        <div id="ideas-list"></div>
+      </div>
+      <div class="side">
+        <section class="panel" id="my-idea" aria-label="Your idea"></section>
+        <section class="panel penalty-box" aria-label="Penalty box">
+          <div class="panel-h"><h2>Penalty box</h2><span class="sub">Who owes what</span></div>
+          <div id="pen-list"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section id="v-log" data-view="log" hidden>
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-h"><h2>How scoring works</h2></div>
+      <ul class="rules-list">
+        <li><b>Base points by rarity:</b> Common 100 · Rare 200 · Epic 400 · Legendary 800.</li>
+        <li><b>Speed bonus:</b> 1st approved finisher +50%, 2nd +25%, 3rd +10%. Order is by submission time.</li>
+        <li><b>Streak bonus:</b> +10 per consecutive approved day after the first, up to +50.</li>
+        <li><b>Approval:</b> a majority of the other members must vote it valid. A majority of rejections throws it out.</li>
+        <li><b>Hours:</b> each quest opens at 12 AM and closes at 10 PM (your local time). No late submissions.</li>
+        <li><b>Punishments:</b> when the week ends (Sunday midnight), whoever has the fewest weekly points has to do the punishment the crew voted for that week on the Punishment tab. Film it and let the crew judge it by the end of the next week, or lose 100 points.</li>
+      </ul>
+    </div>
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-h"><h2>Crew activity</h2><span class="sub" id="heat-sub">Last 12 weeks</span></div>
+      <div class="heat" id="heat"></div>
+    </div>
+    <div class="days" id="days"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true"><div class="modal-box" id="modal-box"></div></div>
+<div class="toast" id="toast" hidden role="status"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+/* Standalone setup: paste your Supabase project URL and anon (public) key here. See README.md.
+   Leave both empty when the page runs as a claude.ai artifact. */
+window.SIDEGAINS_CONFIG = {
+  supabaseUrl: "",
+  supabaseAnonKey: "",
+};
+</script>
+<script>
+(() => {
+"use strict";
+
+/* ---------- quest catalogue ---------- */
+const RARITY = {
+  common:    { label: "Common",    base: 100, pips: 1 },
+  rare:      { label: "Rare",      base: 200, pips: 2 },
+  epic:      { label: "Epic",      base: 400, pips: 3 },
+  legendary: { label: "Legendary", base: 800, pips: 4 },
+};
+const PODIUM = [0.5, 0.25, 0.1];
+const CLOSE_HOUR = 22; /* quests open at 00:00 and close at 22:00 local time */
+const isClosed = () => new Date().getHours() >= CLOSE_HOUR;
+const STREAK_STEP = 10, STREAK_CAP = 50;
+const PROOF = {
+  strength: "Film every rep. Cuts between sets are fine; keep your whole body in frame.",
+  skill: "Film the full hold with a visible timer or stopwatch in frame.",
+};
+const POOL = {
+  common: [
+    { n: "50", u: "Push-ups", k: "strength", r: "Chest to fist height, full lockout at the top. Split into as many sets as you like." },
+    { n: "80", u: "Squats", k: "strength", r: "Hip crease below the knee, stand all the way up." },
+    { n: "30", u: "Burpees", k: "strength", r: "Chest touches the floor, jump with hands overhead at the top." },
+    { n: "60", u: "Lunges", k: "strength", r: "30 per leg. Back knee kisses the floor." },
+    { n: "2:00", u: "Plank total", k: "skill", r: "Accumulate two minutes of forearm plank. Hips level the whole time." },
+    { n: "60", u: "Sit-ups", k: "strength", r: "Shoulder blades off the floor, hands touch your knees." },
+    { n: "30", u: "Pike push-ups", k: "strength", r: "Hips high, head touches the floor in front of your hands." },
+    { n: "60", u: "Glute bridges", k: "strength", r: "Squeeze at the top for a second, shoulders stay on the floor." },
+    { n: "40", u: "Chair dips", k: "strength", r: "Hands on a sturdy chair or the sofa edge. Elbows to 90 degrees." },
+    { n: "1:30", u: "Wall sit total", k: "skill", r: "Thighs parallel to the floor, back flat on the wall. Timer in frame." },
+    { n: "80", u: "Mountain climbers", k: "strength", r: "Count each knee drive. Hips stay low." },
+    { n: "30", u: "Diamond push-ups", k: "strength", r: "Hands together under your chest, elbows tucked, full lockout." },
+    { n: "60", u: "Calf raises", k: "strength", r: "On a step if you have one. Full stretch at the bottom, pause at the top." },
+    { n: "40", u: "Superman holds", k: "strength", r: "Lift arms and legs off the floor, hold one second each rep." },
+  ],
+  rare: [
+    { n: "90", u: "Push-ups", k: "strength", r: "Chest to fist height, full lockout. Any number of sets." },
+    { n: "50", u: "Burpees", k: "strength", r: "Chest to floor, jump at the top." },
+    { n: "20", u: "Pistol squats", k: "strength", r: "10 per leg. Holding a door frame for balance is allowed." },
+    { n: "3:00", u: "Plank total", k: "skill", r: "Forearm plank, hips level. Accumulate three minutes." },
+    { n: "Chipper", u: "30 push-ups · 40 squats · 20 burpees", k: "strength", r: "Finish each movement before starting the next. Rest as needed." },
+    { n: "1:00", u: "Wall handstand total", k: "skill", r: "Chest or back to the wall, arms locked. Accumulate one minute." },
+  ],
+  epic: [
+    { n: "99", u: "Push-ups", k: "strength", r: "One day, 99 clean reps. Every one on camera." },
+    { n: "75", u: "Burpees", k: "strength", r: "Chest to floor, jump at the top. Any number of sets." },
+    { n: "Triple 33", u: "33 push-ups · 33 squats · 33 sit-ups", k: "strength", r: "In any order, any sets. Every rep on camera." },
+    { n: "30", u: "Pistol squats", k: "strength", r: "15 per leg. Door frame for balance is allowed." },
+  ],
+  legendary: [
+    { n: "99", u: "Burpees", k: "strength", r: "One day. Chest to floor, jump at the top, every rep on camera." },
+    { n: "4:00", u: "Plank, unbroken", k: "skill", r: "One continuous forearm plank. Drop once and the clock restarts." },
+  ],
+};
+
+function rngFor(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  return () => { h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; };
+}
+function generatedQuest(date) {
+  const rnd = rngFor("sidegains:" + date);
+  const roll = rnd();
+  const rarity = roll < 0.012 ? "legendary" : roll < 0.06 ? "epic" : roll < 0.22 ? "rare" : "common";
+  const list = POOL[rarity];
+  const q = list[Math.floor(rnd() * list.length)];
+  return { ...q, rarity, custom: false };
+}
+function questFor(date) {
+  const o = S.quests[date];
+  if (o && o.n && o.rarity && RARITY[o.rarity]) return { n: String(o.n), u: String(o.u || ""), k: PROOF[o.k] ? o.k : "strength", r: String(o.r || ""), rarity: o.rarity, custom: true };
+  return generatedQuest(date);
+}
+const questTitle = q => /^[\d.,:]/.test(q.n) ? `${q.n} ${q.u}` : q.n;
+
+/* ---------- exercise demos: keyframed poses solved with 2-bone IK ---------- */
+const P = (s, h, m, f, x = {}) => ({ s, h, m, f, ...x });
+const STAND = P([100, 22], [100, 56], [[103, 58], [99, 58]], [[102, 110], [98, 110]]);
+const PLANK = P([121, 78], [89, 90], [[121, 110], [117, 110]], [[37, 109], [39, 109]]);
+const kf = (pose, hold, t) => ({ ...pose, hold, t });
+const ANIM = {
+  pushup: { vb: "0 48 200 72", k: 1, e: 1, props: ["mat"], frames: [kf(PLANK, 350, 900), kf(P([125, 99], [92, 103], [[121, 110], [117, 110]], [[37, 109], [39, 109]]), 120, 650)] },
+  pike: { vb: "0 30 200 90", k: 1, e: 1, props: ["mat"], frames: [kf(P([114, 84], [92, 62], [[130, 110], [127, 110]], [[60, 110], [64, 110]]), 350, 900), kf(P([122, 98], [98, 72], [[130, 110], [127, 110]], [[60, 110], [64, 110]]), 120, 650)] },
+  squat: { vb: "0 -6 200 124", k: -1, e: -1, props: [], frames: [kf(STAND, 300, 900), kf(P([108, 58], [82, 86], [[140, 60], [137, 62]], [[102, 110], [98, 110]]), 150, 700)] },
+  lunge: { vb: "0 -4 200 122", k: -1, e: 1, props: [], frames: [kf(P([100, 24], [100, 57], [[106, 56], [96, 56]], [[116, 110], [84, 110]]), 300, 900), kf(P([100, 50], [100, 84], [[106, 82], [96, 82]], [[130, 110], [72, 110]]), 150, 700)] },
+  burpee: { k: -1, e: 1, props: [], frames: [
+    kf(STAND, 200, 380),
+    kf(P([110, 68], [86, 88], [[122, 110], [119, 110]], [[102, 110], [98, 110]]), 40, 300),
+    kf(PLANK, 60, 380),
+    kf(P([124, 106], [92, 108], [[121, 110], [117, 110]], [[37, 109], [39, 109]]), 80, 380),
+    kf(PLANK, 40, 300),
+    kf(P([110, 68], [86, 88], [[122, 110], [119, 110]], [[102, 110], [98, 110]]), 40, 330),
+    kf(P([100, 8], [100, 42], [[105, -28], [101, -27]], [[102, 96], [98, 96]]), 100, 360),
+  ] },
+  plank: { vb: "0 56 200 64", k: 1, e: 1, props: ["mat"], frames: [kf(P([120, 90], [86, 98], [[138, 110], [135, 110]], [[34, 109], [38, 109]]), 600, 1400), kf(P([120, 89], [86, 96.5], [[138, 110], [135, 110]], [[34, 109], [38, 109]]), 600, 1400)] },
+  handstand: { vb: "0 -36 200 154", k: 1, e: 1, props: ["wallR"], frames: [kf(P([118, 76], [120, 42], [[118, 110], [113, 110]], [[124, -10], [121, -12]]), 600, 1400), kf(P([118, 75], [120.5, 41], [[118, 110], [113, 110]], [[123, -11], [120, -13]]), 600, 1400)] },
+  situp: { vb: "0 46 200 74", k: -1, e: -1, props: ["mat"], frames: [kf(P([56, 108], [90, 109], [[70, 100], [66, 100]], [[128, 110], [124, 110]]), 250, 800), kf(P([106, 76], [90, 109], [[124, 86], [120, 86]], [[128, 110], [124, 110]]), 150, 750)] },
+  bridge: { vb: "0 56 200 64", k: -1, e: -1, props: ["mat"], frames: [kf(P([58, 109], [92, 109], [[94, 111], [90, 111]], [[124, 110], [120, 110]]), 250, 800), kf(P([60, 107], [92, 88], [[94, 111], [90, 111]], [[124, 110], [120, 110]]), 500, 700)] },
+  dip: { vb: "0 20 200 98", k: -1, e: 1, props: ["chair"], frames: [kf(P([106, 46], [105, 80], [[99, 79], [96, 79]], [[156, 110], [152, 110]]), 300, 850), kf(P([106, 64], [106, 98], [[99, 79], [96, 79]], [[156, 110], [152, 110]]), 120, 650)] },
+  wallsit: { vb: "0 22 200 96", k: -1, e: -1, props: ["wallL"], frames: [kf(P([66, 50], [66, 86], [[86, 84], [82, 84]], [[100, 110], [96, 110]]), 600, 1400), kf(P([66, 51], [66, 87], [[86, 85], [82, 85]], [[100, 110], [96, 110]]), 600, 1400)] },
+  climber: { vb: "0 48 200 72", k: -1, e: 1, props: ["mat"], frames: [kf(P([121, 78], [89, 90], [[121, 110], [117, 110]], [[37, 109], [100, 104]]), 40, 330), kf(P([121, 78], [89, 90], [[121, 110], [117, 110]], [[100, 104], [37, 109]]), 40, 330)] },
+  calf: { vb: "0 -8 200 126", k: -1, e: 1, props: [], frames: [kf(P([100, 22], [100, 56], [[103, 58], [99, 58]], [[100, 110], [97, 110]], { toe: [[110, 110], [107, 110]] }), 250, 600), kf(P([100, 13], [100, 47], [[103, 49], [99, 49]], [[103, 102], [100, 102]], { toe: [[110, 110], [107, 110]] }), 350, 600)] },
+  superman: { vb: "0 66 200 54", k: 1, e: -1, props: ["mat"], frames: [kf(P([128, 108], [94, 109], [[166, 109], [162, 109]], [[40, 110], [44, 110]]), 250, 700), kf(P([128, 103], [94, 108], [[164, 94], [160, 95]], [[40, 100], [44, 101]]), 600, 700)] },
+  pistol: { vb: "0 -6 200 124", k: -1, e: -1, props: [], frames: [kf(P([100, 22], [100, 56], [[103, 58], [99, 58]], [[100, 110], [122, 100]]), 300, 1000), kf(P([112, 64], [88, 92], [[146, 66], [142, 68]], [[100, 110], [148, 96]]), 150, 800)] },
+  posture: { vb: "0 -6 200 124", k: -1, e: 1, props: [], frames: [kf(P([110, 28], [100, 58], [[104, 62], [100, 62]], [[100, 110], [97, 110]], { hf: 1 }), 900, 900), kf(P([100, 22], [100, 56], [[101, 59], [98, 59]], [[100, 110], [97, 110]]), 1400, 900)] },
+};
+ANIM.diamond = { ...ANIM.pushup, frames: ANIM.pushup.frames.map(f => ({ ...f, m: [[124, 110], [123, 110]] })) };
+
+const FORM = {
+  pushup: { name: "Push-up", hi: "arms", muscles: ["Chest", "Triceps", "Core"], cues: ["Hands slightly wider than your shoulders, fingers spread.", "Squeeze your glutes so your body stays one straight plank.", "Keep your elbows about 45° from your body, not flared out.", "Lower until your chest is a fist's height from the floor, then press to full lockout."], mistakes: ["Hips sagging or piking up", "Half reps that never get near the floor"], breath: "Breathe in on the way down, out as you press." },
+  diamond: { name: "Diamond push-up", hi: "arms", muscles: ["Triceps", "Chest"], cues: ["Thumbs and index fingers touch to make a diamond under your chest.", "Elbows brush your ribs on the way down.", "Body stays rigid from heels to head."], mistakes: ["Elbows flaring wide", "Dropping the head before the chest"], breath: "In on the way down, out on the press." },
+  pike: { name: "Pike push-up", hi: "arms", muscles: ["Shoulders", "Triceps"], cues: ["Walk your feet in until your hips are high, like an upside-down V.", "Lower your head forward of your hands, not straight down.", "Keep your legs straight, or bend your knees a little if your hamstrings are tight."], mistakes: ["Dropping the hips so it becomes a normal push-up", "Elbows flaring straight out"], breath: "In as your head lowers, out as you press." },
+  squat: { name: "Squat", hi: "legs", muscles: ["Quads", "Glutes"], cues: ["Feet shoulder-width apart, toes turned out slightly.", "Sit back and down as if there's a chair behind you.", "Knees track over your toes.", "Chest up, heels glued to the floor, hip crease below your knee."], mistakes: ["Heels lifting", "Knees caving inward"], breath: "In on the way down, out as you stand." },
+  lunge: { name: "Lunge", hi: "legs", muscles: ["Quads", "Glutes", "Balance"], cues: ["Take a long step so both knees can bend to 90°.", "Drop straight down until your back knee kisses the floor.", "Keep your torso tall with your hands on your hips.", "Push through your front heel to come back up."], mistakes: ["Front knee shooting way past your toes", "Leaning the torso forward"], breath: "In on the way down, out as you drive up." },
+  burpee: { name: "Burpee", hi: "full", muscles: ["Full body", "Conditioning"], cues: ["Squat down and plant your hands.", "Jump or step your feet back into a plank.", "Chest touches the floor.", "Snap your feet back in and jump with your hands overhead."], mistakes: ["Skipping the chest touch", "No jump at the top"], breath: "Find a rhythm: exhale on the jump." },
+  plank: { name: "Forearm plank", hi: "core", muscles: ["Core", "Shoulders"], cues: ["Elbows under your shoulders, forearms parallel.", "Squeeze your glutes and brace like someone is about to poke your stomach.", "Hold a straight line from heels to head."], mistakes: ["Hips sagging toward the floor", "Butt raised high to make it easier"], breath: "Slow, steady breaths through the nose. Don't hold your breath." },
+  handstand: { name: "Wall handstand", hi: "arms", muscles: ["Shoulders", "Core"], cues: ["Kick up with your back against the wall, or walk your feet up it with your chest facing the wall.", "Lock your arms and push the floor away.", "Look between your hands, ribs pulled in."], mistakes: ["Bent elbows", "Big banana arch in the lower back"], breath: "Short, calm breaths. Come down before you get dizzy." },
+  situp: { name: "Sit-up", hi: "core", muscles: ["Abs", "Hip flexors"], cues: ["Bend your knees with your feet flat on the floor.", "Curl up one vertebra at a time.", "Reach for your knees at the top, then lower with control."], mistakes: ["Yanking your neck with your hands", "Flopping back down"], breath: "Out as you curl up, in as you lower." },
+  bridge: { name: "Glute bridge", hi: "legs", muscles: ["Glutes", "Hamstrings"], cues: ["Heels close to your butt, arms flat on the floor.", "Drive through your heels and lift your hips.", "Squeeze your glutes hard for a second at the top."], mistakes: ["Arching the lower back instead of using the glutes", "Feet too far from the body"], breath: "Out as you lift, in as you lower." },
+  dip: { name: "Chair dip", hi: "arms", muscles: ["Triceps", "Shoulders"], cues: ["Hands on the edge of a sturdy chair, fingers forward.", "Keep your back close to the chair.", "Lower until your elbows reach 90°, then press up."], mistakes: ["Elbows flaring sideways", "Going so deep that your shoulders hurt"], breath: "In on the way down, out on the press." },
+  wallsit: { name: "Wall sit", hi: "legs", muscles: ["Quads", "Glutes"], cues: ["Back flat against the wall.", "Slide down until your thighs are parallel to the floor.", "Knees stacked above your ankles."], mistakes: ["Sitting too high", "Pushing on your thighs with your hands"], breath: "Long exhales help you push through the burn." },
+  climber: { name: "Mountain climber", hi: "core", muscles: ["Core", "Shoulders", "Conditioning"], cues: ["Start in a high plank with your hands under your shoulders.", "Drive one knee toward your chest, then switch fast.", "Keep your hips level with your shoulders."], mistakes: ["Butt in the air", "Feet barely moving"], breath: "Quick rhythmic breathing, out every couple of steps." },
+  calf: { name: "Calf raise", hi: "legs", muscles: ["Calves"], cues: ["Stand on the balls of your feet, on a step if you have one.", "Rise as high as you can and pause for a second.", "Lower slowly into a full stretch."], mistakes: ["Bouncing", "Bending the knees to cheat"], breath: "Out on the way up." },
+  superman: { name: "Superman", hi: "core", muscles: ["Lower back", "Glutes"], cues: ["Lie face down with your arms extended.", "Lift your arms, chest and legs at the same time.", "Hold for a second while looking at the floor."], mistakes: ["Cranking your neck up", "Lifting only your arms"], breath: "Out as you lift." },
+  pistol: { name: "Pistol squat", hi: "legs", muscles: ["Quads", "Glutes", "Balance"], cues: ["Stand on one leg with the other held straight in front of you.", "Sit down slowly with your arms reaching forward to counterbalance.", "Keep your heel down, then drive back up."], mistakes: ["Heel lifting", "Knee collapsing inward"], breath: "In on the way down, out on the drive up." },
+  posture: { name: "Stand tall", hi: "core", muscles: ["Upper back", "Neck"], cues: [], mistakes: [], breath: "" },
+};
+const LIB_ORDER = ["pushup", "diamond", "pike", "squat", "lunge", "pistol", "burpee", "climber", "plank", "wallsit", "situp", "bridge", "dip", "calf", "superman", "handstand"];
+const KEYMAP = [[/pistol/i, "pistol"], [/diamond/i, "diamond"], [/pike/i, "pike"], [/push-?ups?/i, "pushup"], [/burpee/i, "burpee"], [/wall sit/i, "wallsit"], [/squat/i, "squat"], [/lunge/i, "lunge"], [/handstand/i, "handstand"], [/plank/i, "plank"], [/sit-?ups?/i, "situp"], [/bridge/i, "bridge"], [/dip/i, "dip"], [/climber/i, "climber"], [/calf/i, "calf"], [/superman/i, "superman"]];
+function keysFor(text) {
+  const out = [];
+  for (const part of String(text).split(/·|,|\+| and /)) {
+    const hit = KEYMAP.find(([re]) => re.test(part));
+    if (hit && !out.includes(hit[1])) out.push(hit[1]);
+  }
+  return out;
+}
+
+const fmt = p => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`;
+function ik(a, t, l1, l2, sign) {
+  const dx = t[0] - a[0], dy = t[1] - a[1];
+  const d = Math.min(Math.max(Math.hypot(dx, dy), Math.abs(l1 - l2) + .01), l1 + l2 - .01);
+  const c = (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d);
+  const th = Math.atan2(dy, dx) + sign * Math.acos(Math.max(-1, Math.min(1, c)));
+  return [a[0] + l1 * Math.cos(th), a[1] + l1 * Math.sin(th)];
+}
+const lerp = (a, b, u) => a + (b - a) * u;
+const lp = (a, b, u) => [lerp(a[0], b[0], u), lerp(a[1], b[1], u)];
+const ease = u => u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+function lerpPose(a, b, u) {
+  const r = { s: lp(a.s, b.s, u), h: lp(a.h, b.h, u), m: [lp(a.m[0], b.m[0], u), lp(a.m[1], b.m[1], u)], f: [lp(a.f[0], b.f[0], u), lp(a.f[1], b.f[1], u)] };
+  if (a.toe && b.toe) r.toe = [lp(a.toe[0], b.toe[0], u), lp(a.toe[1], b.toe[1], u)];
+  r.hf = lerp(a.hf || 0, b.hf || 0, u);
+  return r;
+}
+function poseAt(A, ms) {
+  const fr = A.frames, total = fr.reduce((n, f) => n + f.hold + f.t, 0);
+  let x = ((ms % total) + total) % total;
+  for (let i = 0; i < fr.length; i++) {
+    const f = fr[i];
+    if (x < f.hold) return f;
+    x -= f.hold;
+    if (x < f.t) return lerpPose(f, fr[(i + 1) % fr.length], ease(x / f.t));
+    x -= f.t;
+  }
+  return fr[0];
+}
+const PROPS = {
+  mat: `<rect class="mat" x="14" y="112" width="172" height="5" rx="2.5"/>`,
+  wallL: `<rect class="prop" x="48" y="-34" width="10" height="148" rx="2"/>`,
+  wallR: `<rect class="prop" x="129" y="-34" width="10" height="148" rx="2"/>`,
+  chair: `<line class="prop-l" x1="62" y1="44" x2="62" y2="114"/><line class="prop-l" x1="98" y1="84" x2="98" y2="114"/><rect class="prop" x="60" y="79" width="42" height="5" rx="2"/>`,
+};
+function figSVG(key) {
+  const A = ANIM[key], F = FORM[key];
+  if (!A) return "";
+  return `<svg class="fig hi-${F.hi}" viewBox="${A.vb || "0 -36 200 154"}" data-fig="${key}" role="img" aria-label="${esc(F.name)} demonstration">
+    ${(A.props || []).map(p => PROPS[p]).join("")}
+    <ellipse class="shadow" cx="100" cy="114" rx="36" ry="3"/>
+    <line class="gnd" x1="6" y1="114" x2="194" y2="114"/>
+    <g class="far"><path class="limb leg"/><path class="limb arm"/></g>
+    <g class="near"><path class="limb leg"/><path class="limb torso"/><path class="limb arm"/><circle class="head" r="8"/></g>
+  </svg>`;
+}
+function drawFig(svg, Pz, A) {
+  const p = svg._p || (svg._p = {
+    legs: [svg.querySelector(".near .leg"), svg.querySelector(".far .leg")],
+    arms: [svg.querySelector(".near .arm"), svg.querySelector(".far .arm")],
+    torso: svg.querySelector(".torso"), head: svg.querySelector(".head"), shadow: svg.querySelector(".shadow"),
+  });
+  for (let i = 0; i < 2; i++) {
+    const kn = ik(Pz.h, Pz.f[i], 27, 27, A.k);
+    let d = `M${fmt(Pz.h)} L${fmt(kn)} L${fmt(Pz.f[i])}`;
+    const toe = Pz.toe ? Pz.toe[i] : (Pz.f[i][1] - kn[1] > 18 ? [Pz.f[i][0] + 8, Pz.f[i][1]] : null);
+    if (toe) d += ` L${fmt(toe)}`;
+    p.legs[i].setAttribute("d", d);
+    const el = ik(Pz.s, Pz.m[i], 19, 19, A.e);
+    p.arms[i].setAttribute("d", `M${fmt(Pz.s)} L${fmt(el)} L${fmt(Pz.m[i])}`);
+  }
+  const vx = Pz.s[0] - Pz.h[0], vy = Pz.s[1] - Pz.h[1], vl = Math.hypot(vx, vy) || 1;
+  const fwd = (Pz.hf || 0) * 6;
+  const head = [Pz.s[0] + vx / vl * 12 + fwd, Math.min(Pz.s[1] + vy / vl * 12 + fwd * .3, 106)];
+  p.torso.setAttribute("d", `M${fmt(Pz.h)} L${fmt(Pz.s)}`);
+  p.head.setAttribute("cx", head[0].toFixed(1)); p.head.setAttribute("cy", head[1].toFixed(1));
+  p.shadow.setAttribute("cx", ((Pz.h[0] + Pz.s[0]) / 2).toFixed(1));
+}
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function figLoop(now) {
+  document.querySelectorAll("svg.fig[data-fig]").forEach(svg => {
+    if (!svg.getClientRects().length) return;
+    const A = ANIM[svg.dataset.fig];
+    if (!A) return;
+    if (RM) { if (svg._drawn) return; svg._drawn = true; drawFig(svg, A.frames[A.frames.length > 1 ? 1 : 0], A); return; }
+    drawFig(svg, poseAt(A, now), A);
+  });
+  requestAnimationFrame(figLoop);
+}
+requestAnimationFrame(figLoop);
+
+function coachHTML(key) {
+  const F = FORM[key];
+  return `<div class="coach-item">
+    <div class="coach-fig">${figSVG(key)}</div>
+    <div style="display:grid;gap:8px;min-width:0">
+      <h3>${esc(F.name)}</h3>
+      <div class="muscles">${F.muscles.map(m => `<span class="tag">${esc(m)}</span>`).join("")}</div>
+      <div class="cue-h">Do it like this</div>
+      <ul class="cues">${F.cues.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+      <div class="cue-h">Doesn't count if</div>
+      <ul class="cues bad">${F.mistakes.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+      ${F.breath ? `<p class="breathline"><b>Breathing:</b> ${esc(F.breath)}</p>` : ""}
+    </div>
+  </div>`;
+}
+
+/* ---------- dates ---------- */
+const pad = n => String(n).padStart(2, "0");
+const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const dateOf = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+const shiftKey = (k, n) => { const d = dateOf(k); d.setDate(d.getDate() + n); return keyOf(d); };
+const todayKey = () => keyOf(new Date());
+function weekStartKey() { const d = new Date(); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow); return keyOf(d); }
+const fmtDay = k => dateOf(k).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+const fmtTime = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+
+/* ---------- state ---------- */
+const S = {
+  mode: "boot", db: null, user: null, assets: null, uid: null, isOwner: false, canWrite: null,
+  members: {}, subs: {}, votes: {}, quests: {}, pens: {}, ideas: {}, ivotes: {}, habits: {},
+  confirmed: {}, slow: false, err: null,
+  range: "week", busy: false, view: "today", day: todayKey(),
+};
+try { const r = localStorage.getItem("sg-range"); if (r === "all" || r === "week") S.range = r; } catch (e) {}
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nameOf = id => (S.members[id] && S.members[id].name) || "Someone";
+const COLORS = ["#2563eb", "#db2777", "#059669", "#d97706", "#7c3aed", "#0891b2", "#dc2626", "#4d7c0f", "#9333ea", "#0f766e"];
+function colorOf(id) { let h = 0; for (const c of String(id)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; }
+const avatar = (id, cls = "") => `<span class="av ${cls}" style="background:${colorOf(id)}" aria-hidden="true">${esc((nameOf(id)[0] || "?").toUpperCase())}</span>`;
+const ord = n => n + (["th", "st", "nd", "rd"][(n % 100 >> 3) ^ 1 && n % 10] || "th");
+const safeLink = u => /^https:\/\/[^\s"'<>]+$/i.test(u || "") ? u : null;
+let toastT;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 3600); }
+const writeChains = {};
+function queueWrite(path, fn) { const p = (writeChains[path] || Promise.resolve()).then(fn, fn); writeChains[path] = p.catch(() => {}); return p; }
+function dbErrMsg(e) {
+  const c = e && e.code;
+  if (c === "invalid_argument") return "You don't have permission to save here. Ask the owner to share the page with you as an Editor.";
+  if (c === "quota_exceeded") return "The group's storage is full. The owner needs to clear out old data.";
+  if (c === "resource_exhausted") return "Too many changes at once. Wait a moment and try again.";
+  return "Couldn't save. Check your connection and try again.";
+}
+
+/* ---------- punishments ---------- */
+const PENALTY = 100;
+const PUNISH = [
+  { t: "75 burpees, one session", r: "No breaks longer than a minute. One continuous video." },
+  { t: "2-minute cold shower", r: "Fully cold, head under. Timer visible on camera." },
+  { t: "60 push-ups with a loaded backpack", r: "Books or water bottles in the bag. Show it before you start." },
+  { t: "3-minute wall sit", r: "Thighs parallel to the floor. Timer in frame." },
+  { t: "3-minute plank, unbroken", r: "Forearm plank. Drop once and the clock restarts." },
+  { t: "80 jump squats", r: "Feet leave the floor every rep. All on camera." },
+  { t: "50 push-ups while singing", r: "Sing between every set of 10. Loud enough to hear." },
+];
+const weekOf = k => { const d = dateOf(k); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return keyOf(d); };
+const fallbackPunishment = (wk, uid) => PUNISH[Math.floor(rngFor("pen:" + wk + ":" + uid)() * PUNISH.length)];
+/* players propose punishments during a week and vote; the most-voted idea punishes that week's last place */
+function ideasFor(wk) {
+  const list = [];
+  for (const [uid, doc] of Object.entries(S.ideas)) {
+    const x = S.members[uid] && doc && doc.w && doc.w[wk];
+    if (x && x.t) list.push({ uid, t: String(x.t), r: String(x.r || ""), at: Number(x.at) || 0, votes: [] });
+  }
+  for (const [voter, doc] of Object.entries(S.ivotes)) {
+    const target = S.members[voter] && doc && doc.w && doc.w[wk];
+    const idea = target && target !== voter && list.find(i => i.uid === target);
+    if (idea) idea.votes.push(voter);
+  }
+  return list.sort((a, b) => b.votes.length - a.votes.length || a.at - b.at);
+}
+const chosenIdea = wk => ideasFor(wk)[0] || null;
+const punishmentFor = (wk, uid) => { const c = chosenIdea(wk); return c ? { t: c.t, r: c.r, by: c.uid } : fallbackPunishment(wk, uid); };
+
+/* ---------- scoring ---------- */
+function compute() {
+  const memberIds = Object.keys(S.members);
+  const subs = [];
+  for (const [uid, doc] of Object.entries(S.subs)) {
+    if (!S.members[uid]) continue;
+    for (const [date, x] of Object.entries((doc && doc.e) || {})) {
+      if (!x || typeof x !== "object") continue;
+      const q = questFor(date);
+      subs.push({ kind: "quest", key: date + "_" + uid, uid, date, at: Number(x.at) || 0, video: x.video || null, link: safeLink(x.link), note: x.note ? String(x.note) : "", label: questTitle(q) });
+    }
+  }
+  for (const [uid, doc] of Object.entries(S.pens)) {
+    if (!S.members[uid]) continue;
+    for (const [wk, x] of Object.entries((doc && doc.e) || {})) {
+      if (!x || typeof x !== "object") continue;
+      const at = Number(x.at) || 0;
+      subs.push({ kind: "pen", key: `pen-${wk}_${uid}_${at}`, uid, date: wk, at, video: x.video || null, link: safeLink(x.link), note: x.note ? String(x.note) : "", label: "Punishment: " + punishmentFor(wk, uid).t });
+    }
+  }
+  const tally = {};
+  for (const [voter, doc] of Object.entries(S.votes)) {
+    if (!S.members[voter]) continue;
+    for (const [k, val] of Object.entries((doc && doc.v) || {})) (tally[k] ||= { yes: [], no: [] })[val > 0 ? "yes" : "no"].push(voter);
+  }
+  for (const s of subs) {
+    const t = tally[s.key] || { yes: [], no: [] };
+    s.yes = t.yes.filter(v => v !== s.uid);
+    s.no = t.no.filter(v => v !== s.uid);
+    const others = memberIds.filter(m => m !== s.uid).length;
+    s.need = others === 0 ? 0 : Math.floor(others / 2) + 1;
+    s.status = s.need === 0 || s.yes.length >= s.need ? "approved" : s.no.length >= s.need ? "rejected" : "pending";
+    s.quest = questFor(s.date);
+  }
+  const byDate = {};
+  for (const s of subs) if (s.kind === "quest") (byDate[s.date] ||= []).push(s);
+  const approvedDates = {};
+  for (const list of Object.values(byDate)) {
+    list.sort((a, b) => a.at - b.at);
+    list.filter(s => s.status === "approved").forEach((s, i) => { s.place = i + 1; (approvedDates[s.uid] ||= new Set()).add(s.date); });
+  }
+  const streakAt = (uid, date) => { const set = approvedDates[uid]; let n = 0, d = date; while (set && set.has(d)) { n++; d = shiftKey(d, -1); } return n; };
+  const wk = weekStartKey(), today = todayKey(), yest = shiftKey(today, -1);
+  const stats = {};
+  for (const id of memberIds) stats[id] = { id, all: 0, week: 0, countAll: 0, countWeek: 0, firstsAll: 0, firstsWeek: 0, best: 0, cur: 0, fails: 0 };
+  const weekPts = {};
+  for (const s of subs) {
+    if (s.kind !== "quest" || s.status !== "approved") continue;
+    s.streak = streakAt(s.uid, s.date);
+    s.points = Math.round(RARITY[s.quest.rarity].base * (1 + (PODIUM[s.place - 1] || 0))) + Math.min((s.streak - 1) * STREAK_STEP, STREAK_CAP);
+    const st = stats[s.uid]; if (!st) continue;
+    st.all += s.points; st.countAll++; if (s.place === 1) st.firstsAll++;
+    if (s.date >= wk) { st.week += s.points; st.countWeek++; if (s.place === 1) st.firstsWeek++; }
+    st.best = Math.max(st.best, s.streak);
+    const w = weekOf(s.date); (weekPts[w] ||= {})[s.uid] = (weekPts[w][s.uid] || 0) + s.points;
+  }
+  for (const id of memberIds) { const st = stats[id]; st.cur = streakAt(id, today) || streakAt(id, yest); }
+
+  /* bottom of each finished week owes a punishment, due by the end of the following week */
+  const bottomOf = wk => {
+    const cutoff = dateOf(shiftKey(wk, 3)).getTime();
+    const elig = memberIds.filter(id => (Number(S.members[id].joined) || 0) < cutoff);
+    if (elig.length < 2) return [];
+    const pts = elig.map(id => (weekPts[wk] && weekPts[wk][id]) || 0);
+    const min = Math.min(...pts);
+    if (min === Math.max(...pts)) return [];
+    return elig.filter((id, i) => pts[i] === min).map(id => ({ id, pts: min }));
+  };
+  const pens = [];
+  const weeks = [...new Set(Object.keys(weekPts))].filter(w => w < wk).sort();
+  for (const w of weeks) {
+    for (const b of bottomOf(w)) {
+      const due = shiftKey(w, 13);
+      const proofs = subs.filter(s => s.kind === "pen" && s.uid === b.id && s.date === w).sort((a, c) => c.at - a.at);
+      const proof = proofs[0] || null;
+      let state = proof ? (proof.status === "approved" ? "cleared" : proof.status === "rejected" ? "redo" : "judging") : "owed";
+      if (state !== "cleared" && today > due) { state = "failed"; stats[b.id].all -= PENALTY; stats[b.id].fails++; }
+      pens.push({ wk: w, uid: b.id, pts: b.pts, due, proof, state, task: punishmentFor(w, b.id) });
+    }
+  }
+  const danger = bottomOf(wk).map(b => b.id);
+  return { memberIds, subs, byDate, stats, pens, danger };
+}
+
+/* ---------- render ---------- */
+let rafId = 0;
+function scheduleRender() { if (!rafId) rafId = requestAnimationFrame(() => { rafId = 0; render(); }); }
+
+function render() {
+  const C = compute();
+  renderMe();
+  renderNote();
+  renderQuest();
+  renderPenance(C);
+  renderSubmit(C);
+  renderFinishers(C);
+  renderQueue(C);
+  renderBoard(C);
+  renderPenaltyBox(C);
+  renderIdeas();
+  renderMyIdea();
+  renderCoach();
+  renderRace(C);
+  renderLife();
+  renderHeat(C);
+  renderLog(C);
+  const mine = S.uid && (C.byDate[todayKey()] || []).find(s => s.uid === S.uid);
+  const st = mine ? mine.status : null;
+  if (S.lastMine === "pending" && st === "approved") { confetti(); toast(`Approved! ${ord(mine.place)} place, +${mine.points} points`); }
+  S.lastMine = st;
+  hydrateMedia();
+}
+
+function renderMe() {
+  const el = $("#me");
+  if (S.uid && S.members[S.uid]) el.innerHTML = `<button type="button" id="me-btn" title="Change your name">${avatar(S.uid)}<span>${esc(nameOf(S.uid))}</span></button>`;
+  else el.innerHTML = "";
+}
+
+function renderNote() {
+  const n = $("#status-note");
+  let html = "";
+  if (S.loadFail) html = "<strong>Couldn't reach the login service.</strong> Check your connection and reload the page.";
+  else if (S.mode === "offline") html = "<strong>You're viewing a preview.</strong> No database is connected yet. See the README for the 10-minute Supabase setup, then reload.";
+  else if (S.mode === "signin") html = "<strong>Members only.</strong> Sign in with the email the crew owner invited, and you'll get a one-tap login link.";
+  else if (S.err) html = "<strong>Lost the connection to the group's data.</strong> Reload the page to reconnect.";
+  else if (S.slow) html = "<strong>Still loading the group's data.</strong> Scores may be out of date until it arrives.";
+  else if (S.mode === "live" && S.canWrite === false) html = "<strong>You can watch but not compete yet.</strong> Ask the owner to share this page with you as an <strong>Editor</strong> so you can submit and vote.";
+  n.innerHTML = html; n.hidden = !html;
+}
+
+function renderQuest() {
+  const today = todayKey(), q = questFor(today), R = RARITY[q.rarity];
+  const el = $("#quest");
+  el.dataset.r = q.rarity;
+  const qk = JSON.stringify([today, q, S.isOwner, S.mode]);
+  if (el.dataset.qk === qk) { tick(); return; }
+  el.dataset.qk = qk;
+  const numeric = /^[\d.,:]/.test(q.n);
+  const keys = keysFor(q.u + " · " + q.n);
+  const pips = [1, 2, 3, 4].map(i => `<i class="${i <= R.pips ? "on" : ""}"></i>`).join("");
+  el.innerHTML = `
+    <div class="q-band"><span><span class="pips" aria-hidden="true">${pips}</span>${R.label} quest</span><span class="when">${esc(fmtDay(today))}</span></div>
+    <div class="q-body">
+      <div class="q-hero">
+        <h1 class="q-big ${numeric ? "" : "long"}"><span class="n">${esc(q.n)}</span><span class="u">${esc(q.u)}</span></h1>
+        ${keys.length ? `<div class="q-figs">${keys.slice(0, 3).map(k => `<button type="button" data-ex="${k}" aria-label="How to do a ${esc(FORM[k].name)}">${figSVG(k)}<span class="figcap">${esc(FORM[k].name)}</span></button>`).join("")}</div>` : ""}
+      </div>
+      ${q.r ? `<p class="q-rules">${esc(q.r)}</p>` : ""}
+      <p class="q-proof"><b>Proof:</b> ${esc(PROOF[q.k])}</p>
+      <dl class="q-meta">
+        <div><dt>Base</dt><dd>${R.base}</dd></div>
+        <div><dt>1st</dt><dd>${Math.round(R.base * 1.5)}</dd></div>
+        <div><dt>2nd</dt><dd>${Math.round(R.base * 1.25)}</dd></div>
+        <div><dt>3rd</dt><dd>${Math.round(R.base * 1.1)}</dd></div>
+        <div><dt id="countdown-label">Closes in</dt><dd id="countdown" class="num">--:--</dd></div>
+      </dl>
+      <div class="q-tools">
+        <span class="tag">${esc(q.k)}</span>
+        ${q.custom ? `<span class="tag">Set by the owner</span>` : ""}
+        ${S.isOwner && S.mode === "live" ? `<button type="button" class="btn ghost" id="custom-btn">Set a custom quest</button>` : ""}
+      </div>
+    </div>`;
+  tick();
+}
+
+function renderSubmit(C) {
+  const el = $("#submit");
+  const today = todayKey();
+  if (S.mode === "boot") { el.innerHTML = `<h2>Your run</h2><p class="muted">Connecting…</p>`; return; }
+  if (S.mode === "offline") { el.innerHTML = `<h2>Your run</h2><p class="muted">Connect a database to submit videos. Setup steps are in the README.</p>`; return; }
+  if (S.mode === "signin") {
+    if (el.querySelector("#signin-form") || S.linkSent) return;
+    el.innerHTML = `
+      <h2>Sign in</h2>
+      <form id="signin-form" class="field" style="gap:12px">
+        <label for="si-email">Your email</label>
+        <input type="text" id="si-email" inputmode="email" autocomplete="email" required placeholder="you@example.com">
+        <p class="err" id="si-err" hidden></p>
+        <button class="btn primary big" type="submit" id="si-btn">Email me a login link</button>
+      </form>`;
+    return;
+  }
+  if (!S.uid) { el.innerHTML = `<h2>Your run</h2><p class="muted">Sign in to join the crew.</p>`; return; }
+  if (!S.members[S.uid]) {
+    if (!S.confirmed.members) { el.innerHTML = `<h2>Your run</h2><p class="muted">Loading the crew…</p>`; return; }
+    if (S.canWrite === false) { el.innerHTML = `<h2>Join the crew</h2><p class="muted">You need Editor access to join. Ask the owner to share this page with you as an Editor.</p>`; return; }
+    if (document.activeElement && document.activeElement.id === "j-name") return;
+    el.innerHTML = `
+      <h2>Join the crew</h2>
+      <p class="muted small">Pick the name everyone will see on the leaderboard.</p>
+      <form id="join-form" class="field">
+        <label for="j-name">Your name</label>
+        <input type="text" id="j-name" maxlength="24" required autocomplete="nickname" placeholder="e.g. Iron Mike">
+        <button class="btn primary big" type="submit">Join</button>
+      </form>`;
+    return;
+  }
+  const mine = (C.byDate[today] || []).find(s => s.uid === S.uid);
+  if (mine) {
+    const prog = mine.status === "pending" ? `<div class="tally"><span>${mine.yes.length} of ${mine.need} approvals</span><span>${mine.no.length} reject${mine.no.length === 1 ? "" : "s"}</span></div><div class="bar"><i style="width:${Math.min(100, (mine.yes.length / Math.max(1, mine.need)) * 100)}%"></i></div>` : "";
+    let headline = "Waiting on votes";
+    if (mine.status === "approved") headline = `${ord(mine.place)} place · +${mine.points}`;
+    if (mine.status === "rejected") headline = "Not counted";
+    el.innerHTML = `
+      <div class="panel-h"><h2>Your run</h2><span class="chip ${mine.status}">${mine.status}</span></div>
+      <div class="mine">
+        <div class="big">${esc(headline)}</div>
+        <p class="muted small" style="margin:0">Submitted at ${esc(fmtTime(mine.at))}.${mine.status === "rejected" ? " The crew voted it down. Come back tomorrow." : ""}</p>
+        ${prog}
+        <div><button type="button" class="linkish" data-watch="${esc(mine.key)}">Watch your submission</button></div>
+      </div>`;
+    return;
+  }
+  if (isClosed() && !S.busy) {
+    el.innerHTML = `
+      <div class="panel-h"><h2>Quest closed</h2><span class="chip rejected">Closed</span></div>
+      <p class="muted" style="margin:0">Submissions close at 10 PM. The next quest drops at midnight, in <b class="num" id="next-quest"></b>.</p>
+      <p class="muted small" style="margin:0">You can still judge the crew's videos below.</p>`;
+    tick();
+    return;
+  }
+  if (S.busy || $("#sub-form")) return;
+  el.innerHTML = `
+    <div class="panel-h"><h2>Submit your run</h2><span class="sub">Open 12 AM – 10 PM</span></div>
+    <form id="sub-form" class="field" style="gap:12px">
+      ${uploadFields("f")}
+      <button class="btn primary big" type="submit" id="f-btn">Submit for judging</button>
+    </form>`;
+}
+
+function uploadFields(p) {
+  return `
+      <div class="drop" id="${p}-drop">
+        <label for="${p}-video">Video file</label>
+        <input type="file" id="${p}-video" accept="video/mp4,video/webm,video/quicktime,video/*" ${S.assets ? "" : "disabled"}>
+        <span class="muted small">${S.assets ? `Pick a video from your phone or computer. MP4, MOV or WebM, up to ${maxMB()} MB.` : "Your account can't upload files here. Ask the owner for access, or paste a link below."}</span>
+      </div>
+      <div class="or">or</div>
+      <div class="field">
+        <label for="${p}-link">Video link</label>
+        <input type="url" id="${p}-link" placeholder="https://youtu.be/… or a Google Drive link" inputmode="url">
+      </div>
+      <div class="field">
+        <label for="${p}-note">Note for the judges (optional)</label>
+        <textarea id="${p}-note" maxlength="280"></textarea>
+      </div>
+      <p class="err" id="${p}-err" hidden></p>`;
+}
+
+const PEN_STATE = { owed: ["pending", "Owed"], judging: ["pending", "Being judged"], redo: ["rejected", "Rejected, redo it"], cleared: ["approved", "Cleared"], failed: ["rejected", `Failed · −${PENALTY}`] };
+
+function renderPenance(C) {
+  const el = $("#penance");
+  const mine = S.uid ? C.pens.filter(p => p.uid === S.uid && (p.state === "owed" || p.state === "redo" || p.state === "judging")) : [];
+  if (!mine.length) { el.hidden = true; el.innerHTML = ""; return; }
+  el.hidden = false;
+  if (S.busy || (el.contains(document.activeElement) && document.activeElement.matches("input,textarea"))) return;
+  const p = mine[0];
+  const [cls, label] = PEN_STATE[p.state];
+  el.innerHTML = `
+    <div class="panel-h"><h2>You owe the crew</h2><span class="chip ${cls}">${esc(label)}</span></div>
+    <p class="muted small" style="margin:0">Last place for the week of ${esc(fmtDay(p.wk))} with ${p.pts} pts. Clear it by end of ${esc(fmtDay(p.due))} or lose ${PENALTY} points.</p>
+    <div class="pen-task">${esc(p.task.t)}</div>
+    <p class="muted small" style="margin:0">${p.task.by ? `Voted in by the crew · pitched by ${esc(nameOf(p.task.by))}` : "Nobody pitched an idea that week, so this one was drawn at random."}</p>
+    <p style="margin:0">${esc(p.task.r)}</p>
+    ${p.state === "judging"
+      ? `<p class="muted small" style="margin:0">Your proof is with the judges: ${p.proof.yes.length} of ${p.proof.need} approvals.</p>`
+      : `<form id="pen-form" class="field" style="gap:12px" data-wk="${esc(p.wk)}">${uploadFields("p")}
+          <button class="btn primary big" type="submit" id="p-btn">Submit punishment proof</button></form>`}`;
+}
+
+function renderPenaltyBox(C) {
+  const el = $("#pen-list");
+  const recent = C.pens.filter(p => p.wk >= shiftKey(weekStartKey(), -28)).sort((a, b) => b.wk.localeCompare(a.wk));
+  $("#danger-line").innerHTML = C.danger.length ? `<p class="danger small"><b>Danger zone right now:</b> ${C.danger.map(id => esc(nameOf(id)) + (id === S.uid ? " (you)" : "")).join(", ")}. Still time to climb out before Sunday midnight.</p>` : "";
+  const danger = "";
+  const rows = recent.map(p => {
+    const [cls, label] = PEN_STATE[p.state];
+    return `<li>${avatar(p.uid)}<span class="who"><b>${esc(nameOf(p.uid))}</b><span>${esc(p.task.t)} · week of ${esc(fmtDay(p.wk))}</span></span>
+      <span class="right"><span class="chip ${cls}">${esc(label)}</span>${p.proof ? `<button type="button" class="linkish" data-watch="${esc(p.proof.key)}">watch</button>` : ""}</span></li>`;
+  }).join("");
+  el.innerHTML = danger + (rows ? `<ol class="fin pen-fin">${rows}</ol>` : `<p class="muted" style="margin:0">No punishments handed out yet. The first ones land after this week closes.</p>`);
+}
+
+function renderIdeas() {
+  const wk = weekStartKey(), list = ideasFor(wk);
+  const isMember = S.uid && S.members[S.uid];
+  const myVote = (S.uid && S.ivotes[S.uid] && S.ivotes[S.uid].w && S.ivotes[S.uid].w[wk]) || null;
+  const dot = $("#idea-dot");
+  const needsVote = isMember && !myVote && list.some(i => i.uid !== S.uid);
+  dot.hidden = !needsVote; dot.textContent = "!";
+  if (!list.length) {
+    $("#ideas-list").innerHTML = `<p class="muted" style="margin:0">No ideas yet this week. Pitch the first one. If nobody suggests anything, last place gets a random punishment from the default list.</p>`;
+    return;
+  }
+  $("#ideas-list").innerHTML = `<ol class="ideas">${list.map((i, n) => {
+    const mine = i.uid === S.uid, voted = myVote === i.uid;
+    return `<li class="${n === 0 ? "lead" : ""}">
+      <span class="votes num"><b>${i.votes.length}</b>vote${i.votes.length === 1 ? "" : "s"}</span>
+      <span class="who"><b class="it">${esc(i.t)}</b>${i.r ? `<span class="ir">${esc(i.r)}</span>` : ""}<span>Pitched by ${esc(nameOf(i.uid))}${mine ? " (you)" : ""}${n === 0 ? " · <em>Leading</em>" : ""}</span></span>
+      ${mine ? `<span class="tag">Yours</span>` : `<button type="button" class="btn yes" data-ivote="${esc(i.uid)}" aria-pressed="${voted}" ${isMember ? "" : "disabled"}>${voted ? "Voted" : "Vote"}</button>`}
+    </li>`;
+  }).join("")}</ol>`;
+}
+
+function renderMyIdea() {
+  const el = $("#my-idea"), wk = weekStartKey();
+  if (!(S.uid && S.members[S.uid])) { el.innerHTML = `<h2>Your idea</h2><p class="muted" style="margin:0">Join the crew on the Today tab to pitch and vote.</p>`; el.dataset.k = ""; return; }
+  const mine = S.ideas[S.uid] && S.ideas[S.uid].w && S.ideas[S.uid].w[wk];
+  const k = wk + "|" + (mine ? mine.at : "none");
+  if (el.dataset.k === k) return;
+  if (el.contains(document.activeElement) && document.activeElement.matches("input,textarea")) return;
+  el.dataset.k = k;
+  el.innerHTML = `
+    <div class="panel-h"><h2>Your idea</h2>${mine ? `<span class="chip approved">Pitched</span>` : ""}</div>
+    <form id="idea-form" class="field" style="gap:12px">
+      <div class="field"><label for="i-t">Punishment</label><input type="text" id="i-t" maxlength="60" required placeholder="e.g. 50 squats holding a full laundry basket"></div>
+      <div class="field"><label for="i-r">Rules (optional)</label><textarea id="i-r" maxlength="200" placeholder="How it has to be done and filmed"></textarea></div>
+      <p class="muted small" style="margin:0">Keep it doable at home. One idea per person per week; saving again replaces yours.</p>
+      <button class="btn primary" type="submit">${mine ? "Update my idea" : "Pitch it"}</button>
+    </form>`;
+  if (mine) { $("#i-t").value = mine.t || ""; $("#i-r").value = mine.r || ""; }
+}
+
+function renderFinishers(C) {
+  const el = $("#finishers");
+  const list = C.byDate[todayKey()] || [];
+  const rows = list.map(s => {
+    const placeCls = s.place ? `p${s.place}` : "";
+    return `<li>
+      <span class="place ${placeCls}">${s.place ? ord(s.place) : "–"}</span>
+      ${avatar(s.uid)}
+      <span class="who"><b>${esc(nameOf(s.uid))}${s.uid === S.uid ? " (you)" : ""}</b><span>${esc(fmtTime(s.at))} · <button type="button" class="linkish" data-watch="${esc(s.key)}">watch</button></span></span>
+      <span class="right">${s.status === "approved" ? `<span class="pts">+${s.points}</span>` : ""}<span class="chip ${s.status}">${s.status}</span></span>
+    </li>`;
+  }).join("");
+  const total = C.memberIds.length;
+  el.innerHTML = `
+    <div class="panel-h"><h2>Finishers</h2><span class="sub">${list.length} of ${total || 0} done</span></div>
+    ${rows ? `<ol class="fin">${rows}</ol>` : `<p class="muted" style="margin:0">Nobody has submitted yet. First approved finisher takes +50%.</p>`}`;
+}
+
+/* vote queue: keyed so playing videos are not reset on updates */
+function renderQueue(C) {
+  const wrap = $("#queue"), sub = $("#queue-sub"), dot = $("#vote-dot");
+  const isMember = S.uid && S.members[S.uid];
+  const myVotes = (S.uid && S.votes[S.uid] && S.votes[S.uid].v) || {};
+  const pending = C.subs.filter(s => s.status === "pending" && s.uid !== S.uid).sort((a, b) => (myVotes[a.key] ? 1 : 0) - (myVotes[b.key] ? 1 : 0) || b.at - a.at);
+  const unvoted = pending.filter(s => !myVotes[s.key]).length;
+  dot.hidden = !(isMember && unvoted); dot.textContent = unvoted;
+  sub.textContent = !isMember ? "Join the crew to vote" : pending.length ? `${unvoted} waiting on your vote` : "";
+  if (!pending.length) {
+    wrap.innerHTML = `<p class="muted" style="margin:0">Nothing to judge right now. When someone submits, their video shows up here and the crew votes on whether the reps count.</p>`;
+    return;
+  }
+  const empty = wrap.querySelector(":scope > p"); if (empty) empty.remove();
+  const seen = new Set();
+  pending.forEach((s, i) => {
+    seen.add(s.key);
+    let card = wrap.querySelector(`[data-key="${CSS.escape(s.key)}"]`);
+    if (!card) {
+      card = document.createElement("article");
+      card.className = "vc"; card.dataset.key = s.key;
+      const media = s.video
+        ? `<div class="vc-media">${videoTag(s.video, "controls playsinline preload=\"metadata\"")}</div>`
+        : `<div class="vc-media linkonly">${s.link ? `<a class="btn" href="${esc(s.link)}" target="_blank" rel="noopener noreferrer">Open video link ↗</a>` : `<span class="muted">No video attached</span>`}</div>`;
+      card.innerHTML = `${media}<div class="vc-body">
+        <div class="vc-top">${avatar(s.uid, "lg")}<span class="who"><b>${esc(nameOf(s.uid))}</b><span>${esc(s.label)} · ${esc(fmtDay(s.date))}, ${esc(fmtTime(s.at))}</span></span></div>
+        ${s.note ? `<p class="vc-note"></p>` : ""}
+        <div class="tally"></div>
+        <div class="vbtns">
+          <button type="button" class="btn yes" data-vote="${esc(s.key)}" data-val="1">Counts</button>
+          <button type="button" class="btn no" data-vote="${esc(s.key)}" data-val="-1">Doesn't count</button>
+        </div></div>`;
+      if (s.note) card.querySelector(".vc-note").textContent = s.note;
+    }
+    const mv = myVotes[s.key];
+    card.classList.toggle("voted", !!mv);
+    card.querySelector(".tally").innerHTML = `<span>${s.yes.length} counts · ${s.no.length} doesn't</span><span>${s.need} needed to decide</span>`;
+    const [y, n] = card.querySelectorAll(".vbtns button");
+    y.setAttribute("aria-pressed", mv > 0 ? "true" : "false");
+    n.setAttribute("aria-pressed", mv < 0 ? "true" : "false");
+    y.disabled = n.disabled = !isMember;
+    if (wrap.children[i] !== card) wrap.insertBefore(card, wrap.children[i] || null);
+  });
+  [...wrap.querySelectorAll(".vc")].forEach(c => { if (!seen.has(c.dataset.key)) c.remove(); });
+}
+
+function renderBoard(C) {
+  $("#rng-week").setAttribute("aria-pressed", S.range === "week");
+  $("#rng-all").setAttribute("aria-pressed", S.range === "all");
+  const w = S.range === "week";
+  const rows = Object.values(C.stats).map(st => ({ ...st, pts: w ? st.week : st.all, n: w ? st.countWeek : st.countAll, f: w ? st.firstsWeek : st.firstsAll }))
+    .sort((a, b) => b.pts - a.pts || b.f - a.f || b.n - a.n || nameOf(a.id).localeCompare(nameOf(b.id)));
+  const pod = $("#podium");
+  if (!rows.length) {
+    pod.innerHTML = "";
+    $("#board-table").innerHTML = `<tbody><tr><td class="muted" style="white-space:normal">${S.mode === "live" ? "No one has joined yet. Join on the Today tab and your name shows up here." : "The leaderboard appears once you open this page signed in."}</td></tr></tbody>`;
+    return;
+  }
+  const top = rows.slice(0, 3);
+  const order = [top[1], top[0], top[2]];
+  const labels = { 0: "1st", 1: "2nd", 2: "3rd" };
+  pod.innerHTML = order.map(r => {
+    if (!r) return `<div></div>`;
+    const i = top.indexOf(r);
+    return `<div class="pod p${i + 1}">${avatar(r.id, "lg")}<span class="nm">${esc(nameOf(r.id))}</span><span class="pp">${r.pts}</span><span class="pl">${labels[i]}</span></div>`;
+  }).join("");
+  $("#board-table").innerHTML = `
+    <thead><tr><th>#</th><th>Athlete</th><th class="r">Points</th><th class="r">Quests</th><th class="r">Firsts</th><th class="r">Streak</th><th class="r">Best</th></tr></thead>
+    <tbody>${rows.map((r, i) => `<tr class="${r.id === S.uid ? "isme" : ""}">
+      <td>${i + 1}</td>
+      <td><span class="nmcell">${avatar(r.id)}${esc(nameOf(r.id))}</span></td>
+      <td class="r"><span class="bigpts">${r.pts}</span></td>
+      <td class="r">${r.n}</td><td class="r">${r.f}</td>
+      <td class="r">${r.cur ? r.cur + "d" : "–"}</td><td class="r">${r.best ? r.best + "d" : "–"}</td>
+    </tr>`).join("")}</tbody>`;
+}
+
+function renderLog(C) {
+  const today = todayKey(), out = [];
+  for (let i = 0; i < 21; i++) {
+    const k = shiftKey(today, -i), q = questFor(k), list = C.byDate[k] || [];
+    const fins = list.map(s => `<button type="button" class="fchip ${s.status}" data-watch="${esc(s.key)}" title="${esc(s.status)}">${avatar(s.uid)}<span>${s.place ? ord(s.place) + " · " : ""}${esc(nameOf(s.uid))}${s.points ? " +" + s.points : ""}</span></button>`).join("");
+    const d = dateOf(k);
+    out.push(`<div class="day" data-r="${q.rarity}">
+      <div class="d">${esc(d.toLocaleDateString(undefined, { weekday: "short" }))}<b>${d.getDate()}</b>${esc(d.toLocaleDateString(undefined, { month: "short" }))}</div>
+      <div style="min-width:0"><h3>${esc(questTitle(q))}<small>${RARITY[q.rarity].label}</small></h3>
+      ${!/^[\d.,:]/.test(q.n) ? `<div class="muted small">${esc(q.u)}</div>` : ""}
+      ${fins ? `<div class="fins">${fins}</div>` : `<div class="muted small">${i === 0 ? (isClosed() ? "Closed at 10 PM. No finishers." : "Open until 10 PM.") : "No finishers."}</div>`}</div>
+    </div>`);
+  }
+  $("#days").innerHTML = out.join("");
+}
+
+/* ---------- form coach + library ---------- */
+function renderCoach() {
+  const el = $("#coach"), q = questFor(todayKey()), keys = keysFor(q.u + " · " + q.n);
+  const k = keys.join(",");
+  if (el.dataset.k === k) return;
+  el.dataset.k = k;
+  if (!keys.length) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `<div class="panel-h"><h2>Form coach</h2><span class="sub">What the judges look for today</span></div>
+    <div class="coach-items">${keys.map(coachHTML).join("")}</div>`;
+}
+function renderLibrary() {
+  $("#lib").innerHTML = LIB_ORDER.map(k => {
+    const F = FORM[k];
+    return `<button type="button" class="lib-card" data-ex="${k}">
+      <div class="lib-fig">${figSVG(k)}</div>
+      <h3>${esc(F.name)}</h3>
+      <div class="muscles">${F.muscles.map(m => `<span class="tag">${esc(m)}</span>`).join("")}</div>
+      <p>${esc(F.cues[0])}</p>
+    </button>`;
+  }).join("");
+  $("#posture-fig").innerHTML = figSVG("posture");
+}
+function openExercise(k) {
+  openModal(`${coachHTML(k)}<div class="row end"><button type="button" class="btn" data-close>Close</button></div>`);
+}
+
+/* ---------- life: habits, water, breathing, tips ---------- */
+const ICON = {
+  sleep: `<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>`,
+  stretch: `<circle cx="12" cy="4.5" r="2"/><path d="M4 9.5h16M12 9.5v5.5l-4 6M12 15l4 6"/>`,
+  protein: `<path d="M12 3c3.9 0 7 6.2 7 10.3A7 7 0 0 1 5 13.3C5 9.2 8.1 3 12 3z"/><circle cx="12" cy="14" r="2.6"/>`,
+  steps: `<path d="M8 3.5c1.9 0 3 2.8 3 5.6S10 13 8 13s-3-1.1-3-3.9 1.1-5.6 3-5.6zM16 9.5c1.9 0 3 2.8 3 5.6S18 19 16 19s-3-1.1-3-3.9 1.1-5.6 3-5.6z"/>`,
+  posture: `<circle cx="12" cy="4.5" r="2"/><path d="M12 7.5v8M8 21l4-5.5 4 5.5M7 11h10"/>`,
+  screens: `<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M3.5 3.5l17 17"/>`,
+};
+const HABITS = [
+  { id: "sleep", n: "7+ hours sleep", s: "Muscles grow while you sleep" },
+  { id: "stretch", n: "10 min mobility", s: "Hips, shoulders, hamstrings" },
+  { id: "protein", n: "Protein each meal", s: "About a palm-sized portion" },
+  { id: "steps", n: "8,000 steps", s: "Walking counts as recovery" },
+  { id: "posture", n: "Hourly posture breaks", s: "Stand up and reset" },
+  { id: "screens", n: "No screens before bed", s: "30 minutes, phone away" },
+];
+const WATER_GOAL = 8;
+const TIPS = [
+  ["Rest days are training days", "Muscles repair and grow between sessions. One easy day a week keeps your streak sustainable."],
+  ["Film from the side", "A side angle shows depth on push-ups and squats best, so the judges will approve you faster."],
+  ["Grease the groove", "Split today's reps into small sets across the day. Five sets of ten beat one ugly set of fifty."],
+  ["Warm up for two minutes", "Arm circles, leg swings and ten slow squats before any quest. Cold joints don't like fast reps."],
+  ["Drink before you're thirsty", "Even 2% dehydration noticeably drops your strength. Keep a glass in sight."],
+  ["Protein spreads well", "Three or four meals with protein beat one giant serving at dinner."],
+  ["Slow down to level up", "Three seconds on the way down makes a mild quest feel like an epic one."],
+  ["Sleep is the cheat code", "Under six hours a night slows recovery and raises your injury risk. Aim for seven or more."],
+  ["Breathe out on the effort", "Exhale as you push or stand up. Holding your breath spikes your blood pressure."],
+  ["Phone at eye level", "Every inch your head drops forward adds roughly 4–5 kg of load on your neck."],
+  ["Walk after meals", "A 10-minute walk after eating helps digestion and blood sugar, and adds easy steps."],
+  ["Quality over speed", "Being first gets bonus points, but a rejected video gets zero. Clean reps come first."],
+  ["Stretch the front, strengthen the back", "Sitting tightens your chest and hip flexors. Open them up and train your upper back."],
+  ["Consistency beats intensity", "Showing up 6 days a week at 70% beats 2 heroic days and a week off."],
+];
+function habitDay(uid, date) { return (S.habits[uid] && S.habits[uid].d && S.habits[uid].d[date]) || {}; }
+function habitScore(h) { return (HABITS.filter(x => h[x.id]).length + Math.min(1, (h.water || 0) / WATER_GOAL)) / (HABITS.length + 1); }
+async function writeHabit(mut) {
+  if (!S.db || !S.uid || !S.members[S.uid]) { toast("Join the crew on the Today tab to track habits."); return; }
+  const path = "habits/" + S.uid, today = todayKey(), cutoff = shiftKey(today, -60);
+  try {
+    await queueWrite(path, () => {
+      const all = { ...((S.habits[S.uid] && S.habits[S.uid].d) || {}) };
+      for (const k of Object.keys(all)) if (k < cutoff) delete all[k];
+      all[today] = mut({ ...(all[today] || {}) });
+      return S.db.doc(path).set({ d: all });
+    });
+  } catch (err) { toast(dbErrMsg(err)); }
+}
+function renderLife() {
+  const today = todayKey(), me = S.uid && S.members[S.uid] ? S.uid : null;
+  const lk = JSON.stringify([today, me, S.habits, S.members]);
+  if (renderLife.k === lk) return;
+  renderLife.k = lk;
+  const h = me ? habitDay(me, today) : {};
+  const sc = habitScore(h), C = 2 * Math.PI * 27;
+  const water = h.water || 0;
+  $("#habits-panel").innerHTML = `
+    <div class="panel-h"><h2>Today's habits</h2><span class="sub">${me ? "Tap to check off" : "Join the crew to track"}</span></div>
+    <div class="score-ring"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="rb" cx="32" cy="32" r="27"/><circle class="rf" cx="32" cy="32" r="27" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - sc)).toFixed(1)}"/></svg>
+      <div><b class="num">${Math.round(sc * 100)}%</b><div class="muted small">of today's healthy habits done</div></div></div>
+    <div class="habits">${HABITS.map(x => `<button type="button" class="habit" data-habit="${x.id}" aria-pressed="${!!h[x.id]}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[x.id]}</svg><span class="hn">${esc(x.n)}</span><span class="hs">${esc(x.s)}</span></button>`).join("")}</div>
+    <div class="field"><label>Water · ${water} of ${WATER_GOAL} glasses</label>
+      <div class="water">${Array.from({ length: WATER_GOAL }, (_, i) => `<button type="button" class="glass ${i < water ? "on" : ""}" data-water="${i + 1}" aria-label="${i + 1} glass${i ? "es" : ""}"><svg viewBox="0 0 32 42"><path class="g-in" d="M8.6 14h14.8l-1.7 23.2a2 2 0 0 1-2 1.8h-7.4a2 2 0 0 1-2-1.8z"/><path class="g-out" d="M5 4h22l-2.6 33.3a3 3 0 0 1-3 2.7H10.6a3 3 0 0 1-3-2.7z"/></svg></button>`).join("")}</div>
+    </div>`;
+  /* crew grid */
+  const ids = Object.keys(S.members);
+  const days = Array.from({ length: 7 }, (_, i) => shiftKey(today, i - 6));
+  $("#crew-habits").innerHTML = ids.length ? `<div class="hgrid">
+    <div class="hrow"><span></span>${days.map(d => `<span class="hhead">${esc(dateOf(d).toLocaleDateString(undefined, { weekday: "narrow" }))}</span>`).join("")}</div>
+    ${ids.map(id => `<div class="hrow"><span class="who"><b>${esc(nameOf(id))}${id === S.uid ? " (you)" : ""}</b></span>${days.map(d => { const p = Math.round(habitScore(habitDay(id, d)) * 100); return `<span class="hcell" title="${esc(nameOf(id))} · ${esc(fmtDay(d))}: ${p}%" style="background:color-mix(in srgb, var(--good) ${p}%, var(--surface-2))"></span>`; }).join("")}</div>`).join("")}
+  </div>` : `<p class="muted" style="margin:0">Once people join, everyone's habit streaks show up here.</p>`;
+  const [t, b] = TIPS[Math.floor(dateOf(today).getTime() / 864e5) % TIPS.length];
+  $("#tip").innerHTML = `<div class="cue-h">Tip of the day</div><div class="tip-t">${esc(t)}</div><p class="muted" style="margin:0">${esc(b)}</p>`;
+}
+
+/* box breathing */
+let breathT = null;
+function stopBreath(done) {
+  clearInterval(breathT); breathT = null;
+  $("#bcircle").classList.remove("big"); $("#bphase").textContent = done ? "Nice work" : "Ready"; $("#bcount").textContent = done ? "✓" : "4";
+  $("#bbtn").textContent = "Start 2-minute session";
+}
+function startBreath() {
+  const phases = [["Breathe in", true], ["Hold", true], ["Breathe out", false], ["Hold", false]];
+  let sec = 0; const end = 120;
+  const step = () => {
+    const ph = phases[Math.floor(sec / 4) % 4], left = 4 - (sec % 4);
+    $("#bphase").textContent = ph[0]; $("#bcount").textContent = left;
+    $("#bcircle").classList.toggle("big", ph[1]);
+    if (++sec > end) stopBreath(true);
+  };
+  step(); breathT = setInterval(step, 1000);
+  $("#bbtn").textContent = "Stop";
+}
+
+/* ---------- charts ---------- */
+function renderRace(C) {
+  const el = $("#race"), wk = weekStartKey(), todayIdx = Math.round((dateOf(todayKey()) - dateOf(wk)) / 864e5);
+  const series = C.memberIds.map(id => {
+    let run = 0; const pts = [];
+    for (let i = 0; i <= todayIdx; i++) {
+      const d = shiftKey(wk, i);
+      run += (C.byDate[d] || []).filter(s => s.uid === id && s.status === "approved").reduce((n, s) => n + s.points, 0);
+      pts.push(run);
+    }
+    return { id, pts, last: run };
+  });
+  const key = JSON.stringify(series.map(s => [s.id, s.pts, nameOf(s.id)]));
+  if (el.dataset.k === key) return;
+  el.dataset.k = key;
+  if (!series.some(s => s.last > 0)) { el.innerHTML = `<p class="muted" style="margin:0">The race starts when the first quest of the week gets approved.</p>`; return; }
+  const W = 640, H = 230, L = 40, R = 110, T = 14, B = 28;
+  const max = Math.max(100, ...series.map(s => s.last)), nice = Math.ceil(max / 100) * 100;
+  const x = i => L + (i / 6) * (W - L - R), y = v => T + (1 - v / nice) * (H - T - B);
+  const grid = [0, .5, 1].map(f => `<line class="gl" x1="${L}" x2="${W - R}" y1="${y(nice * f)}" y2="${y(nice * f)}"/><text x="${L - 8}" y="${y(nice * f) + 4}" text-anchor="end">${Math.round(nice * f)}</text>`).join("");
+  const days = Array.from({ length: 7 }, (_, i) => `<text x="${x(i)}" y="${H - 8}" text-anchor="middle">${esc(dateOf(shiftKey(wk, i)).toLocaleDateString(undefined, { weekday: "short" }))}</text>`).join("");
+  const sorted = [...series].sort((a, b) => b.last - a.last);
+  let prevY = -99; const labelY = {};
+  for (const s of sorted) { let ly = y(s.last) + 4; if (ly - prevY < 14) ly = prevY + 14; labelY[s.id] = ly; prevY = ly; }
+  const lines = series.map(s => {
+    const d = s.pts.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
+    let len = 0; for (let i = 1; i < s.pts.length; i++) len += Math.hypot(x(i) - x(i - 1), y(s.pts[i]) - y(s.pts[i - 1]));
+    const ex = x(s.pts.length - 1), ey = y(s.last), c = colorOf(s.id);
+    return `<path class="ln" d="${d}" stroke="${c}" style="--len:${Math.ceil(len) + 2}"/><circle cx="${ex}" cy="${ey}" r="4.5" fill="${c}"/>
+      <text class="lbl" x="${ex + 10}" y="${labelY[s.id]}">${esc(nameOf(s.id))} · ${s.last}</text>`;
+  }).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative points this week per member">${grid}${days}${lines}</svg>`;
+}
+function renderHeat(C) {
+  const el = $("#heat"), today = todayKey(), start = shiftKey(weekStartKey(), -77);
+  const n = Math.max(1, C.memberIds.length);
+  const cells = [];
+  for (let i = 0; i < 84; i++) {
+    const d = shiftKey(start, i);
+    if (d > today) { cells.push(`<i style="visibility:hidden"></i>`); continue; }
+    const c = (C.byDate[d] || []).filter(s => s.status === "approved").length;
+    const p = c ? Math.round(25 + 75 * Math.min(1, c / n)) : 0;
+    cells.push(`<i class="${d === today ? "today" : ""}" title="${esc(fmtDay(d))}: ${c} finisher${c === 1 ? "" : "s"}" style="${p ? `background:color-mix(in srgb, var(--good) ${p}%, var(--surface-2))` : ""}"></i>`);
+  }
+  const dl = ["Mon", "", "Wed", "", "Fri", "", "Sun"].map(t => `<span>${t}</span>`).join("");
+  el.innerHTML = `<div class="heat-wrap"><div class="heat-days">${dl}</div><div class="heat-grid">${cells.join("")}</div></div>
+    <div class="legend" style="margin-top:8px">Fewer <i style="background:var(--surface-2)"></i><i style="background:color-mix(in srgb, var(--good) 40%, var(--surface-2))"></i><i style="background:color-mix(in srgb, var(--good) 70%, var(--surface-2))"></i><i style="background:var(--good)"></i> More of the crew finished</div>`;
+}
+
+/* ---------- confetti ---------- */
+function confetti() {
+  if (RM) return;
+  const cv = $("#confetti"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
+  const cs = getComputedStyle(document.documentElement);
+  const cols = ["--accent", "--r-legendary", "--r-epic", "--good", "--r-rare", "--water"].map(v => cs.getPropertyValue(v).trim());
+  const ps = Array.from({ length: 160 }, () => ({ x: innerWidth / 2 + (Math.random() - .5) * 120, y: innerHeight * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, r: Math.random() * 6 + 3, a: Math.random() * 6, va: (Math.random() - .5) * .4, c: cols[Math.floor(Math.random() * cols.length)] }));
+  const t0 = performance.now();
+  (function frame(t) {
+    const k = (t - t0) / 2600;
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    for (const p of ps) { p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); ctx.restore(); }
+    if (k < 1) requestAnimationFrame(frame); else ctx.clearRect(0, 0, innerWidth, innerHeight);
+  })(t0);
+}
+
+/* ---------- countdown + day rollover ---------- */
+function tick() {
+  const now = new Date(), closed = isClosed();
+  const end = new Date(now); end.setHours(closed ? 24 : CLOSE_HOUR, 0, 0, 0);
+  const s = Math.max(0, Math.floor((end - now) / 1000));
+  const hms = `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+  const el = document.getElementById("countdown");
+  if (el) el.textContent = closed ? "Closed" : hms;
+  const lab = document.getElementById("countdown-label");
+  if (lab) lab.textContent = closed ? "Next quest in" : "Closes in";
+  const nx = document.getElementById("next-quest");
+  if (nx) nx.textContent = hms;
+  const qEl = document.querySelector(".q-band");
+  if (qEl) qEl.style.setProperty("--dayp", (closed ? 100 : 100 * (1 - s / (CLOSE_HOUR * 3600))).toFixed(2) + "%");
+  if (closed !== S.closed) { S.closed = closed; scheduleRender(); }
+  const wEl = document.getElementById("week-countdown");
+  if (wEl) {
+    const wEnd = dateOf(shiftKey(weekStartKey(), 7)), ws = Math.max(0, Math.floor((wEnd - now) / 1000));
+    wEl.textContent = `${Math.floor(ws / 86400)}d ${Math.floor(ws / 3600) % 24}h ${pad(Math.floor(ws / 60) % 60)}m left`;
+  }
+  if (todayKey() !== S.day) { S.day = todayKey(); scheduleRender(); }
+}
+setInterval(tick, 1000);
+
+/* ---------- modal ---------- */
+function openModal(html) { $("#modal-box").innerHTML = html; $("#modal").hidden = false; hydrateMedia(); const f = $("#modal-box").querySelector("input,select,textarea,button"); if (f) f.focus(); }
+function closeModal() { $("#modal").hidden = true; $("#modal-box").innerHTML = ""; }
+$("#modal").addEventListener("click", e => { if (e.target.id === "modal" || e.target.closest("[data-close]")) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#modal").hidden) closeModal(); });
+
+function watch(key) {
+  const s = compute().subs.find(x => x.key === key); if (!s) return;
+  const media = s.video ? videoTag(s.video, "controls playsinline autoplay muted") : "";
+  const link = s.link ? `<a class="btn" href="${esc(s.link)}" target="_blank" rel="noopener noreferrer">Open video link ↗</a>` : "";
+  openModal(`
+    <div class="panel-h"><h2>${esc(nameOf(s.uid))}</h2><span class="chip ${s.status}">${s.status}</span></div>
+    <p class="muted small" style="margin:0">${esc(s.label)} · ${esc(fmtDay(s.date))}, ${esc(fmtTime(s.at))}${s.points ? ` · +${s.points} pts` : ""}</p>
+    ${media}${link}${!media && !link ? `<p class="muted">No video attached.</p>` : ""}
+    <p class="vc-note" id="m-note" ${s.note ? "" : "hidden"}></p>
+    <p class="small muted" style="margin:0">${s.yes.length} counts · ${s.no.length} doesn't · ${s.need} needed to decide</p>
+    <div class="row end"><button type="button" class="btn" data-close>Close</button></div>`);
+  if (s.note) $("#m-note").textContent = s.note;
+}
+
+function renameDialog() {
+  openModal(`<h2>Your name</h2>
+    <form id="rename-form" class="field" style="gap:12px">
+      <label for="r-name">Shown on the leaderboard</label>
+      <input type="text" id="r-name" maxlength="24" required>
+      <div class="row end">${S.sb ? `<button type="button" class="btn ghost" id="signout-btn">Sign out</button>` : ""}<button type="button" class="btn" data-close>Cancel</button><button class="btn primary" type="submit">Save</button></div>
+    </form>`);
+  $("#r-name").value = nameOf(S.uid);
+}
+
+function customDialog() {
+  const today = todayKey(), q = questFor(today);
+  openModal(`<h2>Custom quest for ${esc(fmtDay(today))}</h2>
+    <p class="muted small" style="margin:0">Replaces today's generated quest for everyone.</p>
+    <form id="custom-form" class="field" style="gap:12px">
+      <div class="grid2">
+        <div class="field"><label for="c-n">Headline</label><input type="text" id="c-n" maxlength="24" required placeholder="250 or Chipper"></div>
+        <div class="field"><label for="c-u">Exercise</label><input type="text" id="c-u" maxlength="90" required placeholder="Push-ups"></div>
+        <div class="field"><label for="c-r">Rarity</label><select id="c-r">${Object.entries(RARITY).map(([k, v]) => `<option value="${k}">${v.label} (${v.base} pts)</option>`).join("")}</select></div>
+        <div class="field"><label for="c-k">Type</label><select id="c-k"><option value="strength">Strength</option><option value="skill">Skill hold</option></select></div>
+      </div>
+      <div class="field"><label for="c-rules">Standards</label><textarea id="c-rules" maxlength="300"></textarea></div>
+      <div class="row end">
+        ${q.custom ? `<button type="button" class="btn ghost" id="c-reset">Go back to generated quest</button>` : ""}
+        <button type="button" class="btn" data-close>Cancel</button><button class="btn primary" type="submit">Set quest</button>
+      </div>
+    </form>`);
+  $("#c-n").value = q.n; $("#c-u").value = q.u; $("#c-r").value = q.rarity; $("#c-k").value = q.k; $("#c-rules").value = q.r;
+}
+
+/* ---------- actions ---------- */
+document.addEventListener("click", async e => {
+  const w = e.target.closest("[data-watch]"); if (w) { watch(w.dataset.watch); return; }
+  const ex = e.target.closest("[data-ex]"); if (ex) { openExercise(ex.dataset.ex); return; }
+  const hb = e.target.closest("[data-habit]");
+  if (hb) { const id = hb.dataset.habit; await writeHabit(h => { if (h[id]) delete h[id]; else h[id] = 1; return h; }); return; }
+  const wt = e.target.closest("[data-water]");
+  if (wt) { const n = Number(wt.dataset.water); await writeHabit(h => { h.water = (h.water || 0) === n ? n - 1 : n; return h; }); return; }
+  if (e.target.closest("#bbtn")) { if (breathT) stopBreath(false); else startBreath(); return; }
+  const v = e.target.closest("[data-vote]");
+  if (v) {
+    if (!S.db || !S.uid || !S.members[S.uid]) return;
+    const key = v.dataset.vote, val = Number(v.dataset.val);
+    const path = "votes/" + S.uid;
+    try {
+      await queueWrite(path, () => {
+        const cur = { ...((S.votes[S.uid] && S.votes[S.uid].v) || {}) };
+        if (cur[key] === val) delete cur[key]; else cur[key] = val;
+        return S.db.doc(path).set({ v: cur });
+      });
+    } catch (err) { toast(dbErrMsg(err)); }
+    return;
+  }
+  const iv = e.target.closest("[data-ivote]");
+  if (iv) {
+    if (!S.db || !S.uid || !S.members[S.uid]) return;
+    const wk = weekStartKey(), target = iv.dataset.ivote, path = "ivotes/" + S.uid;
+    try {
+      await queueWrite(path, () => {
+        const cur = { ...((S.ivotes[S.uid] && S.ivotes[S.uid].w) || {}) };
+        if (cur[wk] === target) delete cur[wk]; else cur[wk] = target;
+        return S.db.doc(path).set({ w: cur });
+      });
+    } catch (err) { toast(dbErrMsg(err)); }
+    return;
+  }
+  if (e.target.closest("#me-btn")) { renameDialog(); return; }
+  if (e.target.closest("#signout-btn")) { await S.sb.auth.signOut(); location.replace(location.origin + location.pathname); return; }
+  if (e.target.closest("#custom-btn")) { customDialog(); return; }
+  if (e.target.closest("#c-reset")) {
+    try { await S.db.doc("quests/" + todayKey()).delete(); closeModal(); toast("Back to the generated quest"); } catch (err) { toast(dbErrMsg(err)); }
+    return;
+  }
+  if (e.target.id === "rng-week" || e.target.id === "rng-all") {
+    S.range = e.target.id === "rng-week" ? "week" : "all";
+    try { localStorage.setItem("sg-range", S.range); } catch (err) {}
+    scheduleRender();
+  }
+});
+
+document.addEventListener("change", e => {
+  if (e.target.id === "f-video" || e.target.id === "p-video") e.target.closest(".drop").classList.toggle("has", !!e.target.files.length);
+});
+
+document.addEventListener("submit", async e => {
+  e.preventDefault();
+  const id = e.target.id;
+  if (id === "join-form") {
+    const name = $("#j-name").value.trim().slice(0, 24); if (!name) return;
+    try { await S.db.doc("members/" + S.uid).set({ name, joined: Date.now() }); toast(`Welcome, ${name}`); }
+    catch (err) { toast(dbErrMsg(err)); }
+  }
+  if (id === "rename-form") {
+    const name = $("#r-name").value.trim().slice(0, 24); if (!name) return;
+    try { await S.db.doc("members/" + S.uid).set({ ...(S.members[S.uid] || {}), name }); closeModal(); toast("Name updated"); }
+    catch (err) { toast(dbErrMsg(err)); }
+  }
+  if (id === "custom-form") {
+    const data = { n: $("#c-n").value.trim(), u: $("#c-u").value.trim(), rarity: $("#c-r").value, k: $("#c-k").value, r: $("#c-rules").value.trim(), setAt: Date.now() };
+    if (!data.n || !data.u) return;
+    try { await S.db.doc("quests/" + todayKey()).set(data); closeModal(); toast("Today's quest updated"); }
+    catch (err) { toast(dbErrMsg(err)); }
+  }
+  if (id === "signin-form") {
+    const email = $("#si-email").value.trim(), errEl = $("#si-err"), btn = $("#si-btn");
+    if (!/^\S+@\S+\.\S+$/.test(email)) { errEl.textContent = "Enter a valid email address."; errEl.hidden = false; return; }
+    btn.disabled = true; btn.textContent = "Sending…";
+    const { error } = await S.sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } });
+    if (error) {
+      btn.disabled = false; btn.textContent = "Email me a login link";
+      errEl.textContent = /signups? not allowed|not found|otp_disabled/i.test(error.message) ? "That email isn't on the crew list. Ask the owner to invite you." : /rate|seconds/i.test(error.message) ? "Too many attempts. Wait a minute, then try again." : "Couldn't send the link. Check the address and try again.";
+      errEl.hidden = false; return;
+    }
+    S.linkSent = true;
+    $("#submit").innerHTML = `<h2>Check your inbox</h2><p class="muted" style="margin:0">We sent a login link to <b></b>. Open it on this device to sign in. Check your spam folder if it doesn't show up.</p>`;
+    $("#submit b").textContent = email;
+    return;
+  }
+  if (id === "idea-form") {
+    const t = $("#i-t").value.trim().slice(0, 60), r = $("#i-r").value.trim().slice(0, 200);
+    if (!t) return;
+    const wk = weekStartKey(), path = "ideas/" + S.uid;
+    try {
+      await queueWrite(path, () => {
+        const cur = { ...((S.ideas[S.uid] && S.ideas[S.uid].w) || {}) };
+        cur[wk] = { t, r, at: Date.now() };
+        return S.db.doc(path).set({ w: cur });
+      });
+      document.activeElement && document.activeElement.blur();
+      toast("Idea saved. Now get the crew to vote for it.");
+    } catch (err) { toast(dbErrMsg(err)); }
+  }
+  if (id === "sub-form") await submitRun("f", "subs", todayKey(), false);
+  if (id === "pen-form") await submitRun("p", "pens", e.target.dataset.wk, true);
+});
+
+async function submitRun(p, coll, slot, replace) {
+  const errEl = $(`#${p}-err`), btn = $(`#${p}-btn`), label = btn.textContent;
+  const showErr = m => { errEl.textContent = m; errEl.hidden = false; };
+  errEl.hidden = true;
+  const fileEl = $(`#${p}-video`), file = fileEl && fileEl.files[0];
+  const linkRaw = $(`#${p}-link`).value.trim(), note = $(`#${p}-note`).value.trim().slice(0, 280);
+  if (!file && !linkRaw) return showErr("Add a video file or paste a link to your video.");
+  if (linkRaw && !safeLink(linkRaw)) return showErr("Links need to start with https://");
+  if (file && file.size > maxMB() * 1024 * 1024) return showErr(`That file is ${(file.size / 1048576).toFixed(0)} MB and the limit is ${maxMB()} MB. Trim it, record at a lower resolution, or paste a link instead.`);
+  if (coll === "subs" && isClosed()) return showErr("Today's quest closed at 10 PM. The next one opens at midnight.");
+  S.busy = true; btn.disabled = true; btn.textContent = file ? "Uploading video…" : "Submitting…";
+  try {
+    let video = null;
+    if (file) {
+      const type = file.type === "video/webm" ? "video/webm" : "video/mp4";
+      try { video = (await S.assets.upload(file, { type })).id; }
+      catch (err) {
+        const c = err && err.code;
+        throw new Error(c === "too_large" ? `That video is over the ${maxMB()} MB upload limit. Paste a link instead.`
+          : c === "unsupported_type" ? "That video format isn't supported. Export it as MP4, or paste a link instead."
+          : c === "quota_or_state" ? "The group's video storage is full. Paste a link instead."
+          : c === "rate_limited" ? "Too many uploads in a row. Wait a minute and try again."
+          : "The upload failed. Try again, or paste a link instead.");
+      }
+    }
+    const entry = { at: Date.now(), video, link: linkRaw || null, note };
+    const path = coll + "/" + S.uid;
+    await queueWrite(path, () => {
+      const cur = { ...((S[coll][S.uid] && S[coll][S.uid].e) || {}) };
+      if (cur[slot] && !replace) return;
+      cur[slot] = entry;
+      return S.db.doc(path).set({ e: cur });
+    });
+    S.busy = false;
+    toast("Submitted. The crew will judge it.");
+    scheduleRender();
+  } catch (err) {
+    S.busy = false; btn.disabled = false; btn.textContent = label;
+    showErr(err instanceof Error ? err.message : dbErrMsg(err));
+  }
+}
+
+/* ---------- routing ---------- */
+function route() {
+  const v = ["today", "board", "punish", "form", "life", "log"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "today";
+  S.view = v;
+  document.querySelectorAll("main [data-view]").forEach(el => (el.hidden = el.dataset.view !== v));
+  document.querySelectorAll(".tabs a").forEach(a => a.setAttribute("aria-current", a.dataset.view === v ? "page" : "false"));
+}
+window.addEventListener("hashchange", route);
+route();
+
+/* ---------- storage backends ---------- */
+/* Two interchangeable backends with the same doc-store shape:
+   1. claude.ai artifact runtime (db + assets + user capabilities)
+   2. Supabase (Postgres table `docs`, Storage bucket `videos`, email magic-link auth) for the standalone GitHub version */
+const CFG = window.SIDEGAINS_CONFIG || {};
+const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";
+const maxMB = () => (S.sb ? 50 : 20);
+const urlCache = {};
+function mediaUrl(id) {
+  if (!id) return "";
+  if (!String(id).startsWith("sb:")) return "/_blob/" + id;
+  const c = urlCache[id];
+  if (c && c.url && c.exp > Date.now()) return c.url;
+  if (S.sb && !(c && c.pending)) {
+    urlCache[id] = { pending: true, url: (c && c.url) || "", exp: 0 };
+    S.sb.storage.from("videos").createSignedUrl(id.slice(3), 6 * 3600).then(({ data }) => {
+      urlCache[id] = data ? { url: data.signedUrl, exp: Date.now() + 5 * 3600e3 } : { url: "", exp: Date.now() + 60e3 };
+      hydrateMedia();
+    });
+  }
+  return (urlCache[id] && urlCache[id].url) || "";
+}
+function videoTag(id, attrs) {
+  const u = mediaUrl(id);
+  return `<video data-asset="${esc(id)}" ${u ? `src="${esc(u)}"` : ""} ${attrs}></video>`;
+}
+function hydrateMedia() {
+  document.querySelectorAll("video[data-asset]").forEach(v => {
+    const u = mediaUrl(v.dataset.asset);
+    if (u && v.getAttribute("src") !== u) v.setAttribute("src", u);
+  });
+}
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+}
+function supabaseDb(sb) {
+  const listeners = {};
+  const fail = error => ({ code: error && (error.code === "42501" || /row-level security/i.test(error.message || "")) ? "invalid_argument" : "unavailable", message: error && error.message });
+  const local = (coll, id, data) => {
+    const l = listeners[coll]; if (!l) return;
+    if (data === null) l.rows.delete(id); else l.rows.set(id, data);
+    l.emit();
+  };
+  return {
+    doc(path) {
+      const [coll, id] = path.split("/");
+      return {
+        async set(data) {
+          const { error } = await sb.from("docs").upsert({ coll, id, data, updated_at: new Date().toISOString() });
+          if (error) throw fail(error);
+          local(coll, id, data);
+        },
+        async delete() {
+          const { error } = await sb.from("docs").delete().eq("coll", coll).eq("id", id);
+          if (error) throw fail(error);
+          local(coll, id, null);
+        },
+      };
+    },
+    collection(coll) {
+      return {
+        onSnapshot(next, onErr) {
+          const rows = new Map();
+          const emit = () => next({ docs: [...rows].map(([id, d]) => ({ id, exists: true, data: () => d })), metadata: { fromCache: false, hasPendingWrites: false } });
+          listeners[coll] = { rows, emit };
+          const ch = sb.channel("docs-" + coll)
+            .on("postgres_changes", { event: "*", schema: "public", table: "docs", filter: `coll=eq.${coll}` }, p => {
+              if (p.eventType === "DELETE") rows.delete(p.old.id); else rows.set(p.new.id, p.new.data);
+              emit();
+            })
+            .subscribe();
+          sb.from("docs").select("id,data").eq("coll", coll).then(({ data, error }) => {
+            if (error) { if (onErr) onErr(fail(error)); return; }
+            for (const r of data) rows.set(r.id, r.data);
+            emit();
+          });
+          return () => { delete listeners[coll]; sb.removeChannel(ch); };
+        },
+      };
+    },
+  };
+}
+function supabaseAssets(sb) {
+  return {
+    async upload(file, { type }) {
+      const ext = type === "video/webm" ? "webm" : "mp4";
+      const path = `${S.uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await sb.storage.from("videos").upload(path, file, { contentType: type, upsert: false });
+      if (error) throw { code: /exceed|too large|413|maximum/i.test(error.message) ? "too_large" : /mime|type/i.test(error.message) ? "unsupported_type" : /quota|limit/i.test(error.message) ? "quota_or_state" : "upstream_error", message: error.message };
+      return { id: "sb:" + path };
+    },
+  };
+}
+async function bootSupabase() {
+  if (!window.supabase) {
+    try { await loadScript(SUPABASE_JS); } catch (e) { S.mode = "offline"; S.loadFail = true; render(); return null; }
+  }
+  const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
+  S.sb = sb;
+  const { data: { session } } = await sb.auth.getSession();
+  sb.auth.onAuthStateChange((ev, sess) => {
+    if (ev === "SIGNED_IN" && S.mode === "signin" && sess) location.replace(location.origin + location.pathname);
+  });
+  if (!session) { S.mode = "signin"; render(); return null; }
+  S.uid = session.user.id;
+  const { data: adm } = await sb.from("admins").select("uid").eq("uid", S.uid).maybeSingle();
+  S.isOwner = !!adm; S.canWrite = true;
+  S.assets = supabaseAssets(sb);
+  return supabaseDb(sb);
+}
+
+/* ---------- boot ---------- */
+renderLibrary();
+render();
+async function boot() {
+  let db = null;
+  if (window.claude && typeof window.claude.use === "function") {
+    const [cdb, user, assets] = await Promise.all([claude.use("db"), claude.use("user"), claude.use("assets")]);
+    db = cdb;
+    if (db) {
+      S.user = user; S.assets = assets;
+      if (user) {
+        const [id, own, can] = await Promise.all([user.id(), user.isOwner(), user.can("data.write")]);
+        S.uid = id; S.isOwner = own; S.canWrite = can;
+      }
+    }
+  } else if (CFG.supabaseUrl && CFG.supabaseAnonKey) {
+    db = await bootSupabase();
+    if (!db) return;
+  }
+  if (!db) { S.mode = "offline"; render(); return; }
+  S.db = db; S.mode = "live";
+  const names = ["members", "subs", "votes", "quests", "pens", "ideas", "ivotes", "habits"];
+  const timer = setTimeout(() => { if (names.some(n => !S.confirmed[n])) { S.slow = true; scheduleRender(); } }, 10000);
+  for (const name of names) {
+    db.collection(name).onSnapshot(snap => {
+      const o = {}; snap.docs.forEach(d => { if (d.exists) o[d.id] = d.data(); });
+      S[name] = o;
+      if (!snap.metadata.fromCache) S.confirmed[name] = true;
+      if (names.every(n => S.confirmed[n])) { clearTimeout(timer); S.slow = false; }
+      scheduleRender();
+    }, err => { S.err = err.code || "error"; clearTimeout(timer); scheduleRender(); });
+  }
+  render();
+}
+boot();
+})();
+</script>
