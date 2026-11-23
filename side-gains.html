@@ -515,6 +515,7 @@ main > section:not([hidden]) { animation: rise .45s cubic-bezier(.2,.8,.2,1) bot
    On claude.ai the built-in storage is used instead, so these are ignored there.
    openHour / closeHour: when the daily quest accepts submissions, in 24-hour local time (12 = 12 PM, 22 = 10 PM). */
 window.SIDEGAINS_CONFIG = {
+  level: "starter", /* "starter" = light, quick, one move a day; "standard" = harder quests */
   openHour: 12,
   closeHour: 22,
   supabaseUrl: "https://crljnytspdeltxvlohto.supabase.co",
@@ -546,7 +547,7 @@ const PROOF = {
   strength: "Film every rep. Cuts between sets are fine; keep your whole body in frame.",
   skill: "Film the full hold with a visible timer or stopwatch in frame.",
 };
-const POOL = {
+const POOL_STANDARD = {
   common: [
     { n: "50", u: "Push-ups", k: "strength", r: "Chest to fist height, full lockout at the top. Split into as many sets as you like." },
     { n: "80", u: "Squats", k: "strength", r: "Hip crease below the knee, stand all the way up." },
@@ -582,6 +583,41 @@ const POOL = {
     { n: "4:00", u: "Plank, unbroken", k: "skill", r: "One continuous forearm plank. Drop once and the clock restarts." },
   ],
 };
+/* Starter level: light, quick, one move per day. Switch to "standard" in SIDEGAINS_CONFIG.level to tone up. */
+const POOL_STARTER = {
+  common: [
+    { n: "20", u: "Push-ups", k: "strength", r: "Chest to fist height, full lockout. Knees on the floor is fine to start." },
+    { n: "30", u: "Squats", k: "strength", r: "Hip crease to knee height or lower, stand all the way up." },
+    { n: "10", u: "Burpees", k: "strength", r: "Chest to the floor, small jump at the top. Take your time." },
+    { n: "20", u: "Lunges", k: "strength", r: "10 per leg. Back knee close to the floor." },
+    { n: "0:45", u: "Plank", k: "skill", r: "Forearm plank, hips level. Breaks allowed until you reach 45 seconds total." },
+    { n: "25", u: "Sit-ups", k: "strength", r: "Shoulder blades off the floor, hands touch your knees." },
+    { n: "25", u: "Glute bridges", k: "strength", r: "Squeeze at the top for a second, shoulders stay on the floor." },
+    { n: "15", u: "Chair dips", k: "strength", r: "Hands on a sturdy chair or sofa edge. Elbows to about 90 degrees." },
+    { n: "0:45", u: "Wall sit", k: "skill", r: "Back flat on the wall, thighs as close to parallel as you can." },
+    { n: "30", u: "Mountain climbers", k: "strength", r: "Count each knee drive. Steady pace is fine." },
+    { n: "30", u: "Calf raises", k: "strength", r: "Rise high, pause, lower slowly." },
+    { n: "15", u: "Superman holds", k: "strength", r: "Lift arms and legs, hold one second each rep." },
+    { n: "10", u: "Pike push-ups", k: "strength", r: "Hips high, lower your head toward the floor in front of your hands." },
+  ],
+  rare: [
+    { n: "35", u: "Push-ups", k: "strength", r: "Chest to fist height, full lockout. Any number of sets." },
+    { n: "50", u: "Squats", k: "strength", r: "Hip crease to knee height or lower. Any number of sets." },
+    { n: "15", u: "Burpees", k: "strength", r: "Chest to the floor, jump at the top." },
+    { n: "1:15", u: "Plank", k: "skill", r: "Forearm plank. Breaks allowed until you hit the total." },
+    { n: "1:00", u: "Wall sit", k: "skill", r: "Thighs parallel if you can. Breaks allowed until you hit the total." },
+  ],
+  epic: [
+    { n: "50", u: "Push-ups", k: "strength", r: "Any number of sets across the day. Every rep on camera." },
+    { n: "25", u: "Burpees", k: "strength", r: "Chest to the floor, jump at the top. Rest as needed." },
+    { n: "75", u: "Squats", k: "strength", r: "Any number of sets. Every rep on camera." },
+  ],
+  legendary: [
+    { n: "40", u: "Burpees", k: "strength", r: "Any number of sets. Chest to the floor every rep." },
+    { n: "2:00", u: "Plank", k: "skill", r: "Forearm plank. Breaks allowed until you hit two minutes total." },
+  ],
+};
+const POOL = (window.SIDEGAINS_CONFIG || {}).level === "standard" ? POOL_STANDARD : POOL_STARTER;
 
 function rngFor(str) {
   let h = 1779033703 ^ str.length;
@@ -805,7 +841,7 @@ function dbErrMsg(e) {
 
 /* ---------- punishments ---------- */
 const PENALTY = 100;
-const PUNISH = [
+const PUNISH_STANDARD = [
   { t: "75 burpees, one session", r: "No breaks longer than a minute. One continuous video." },
   { t: "2-minute cold shower", r: "Fully cold, head under. Timer visible on camera." },
   { t: "60 push-ups with a loaded backpack", r: "Books or water bottles in the bag. Show it before you start." },
@@ -814,6 +850,15 @@ const PUNISH = [
   { t: "80 jump squats", r: "Feet leave the floor every rep. All on camera." },
   { t: "50 push-ups while singing", r: "Sing between every set of 10. Loud enough to hear." },
 ];
+const PUNISH_STARTER = [
+  { t: "30 burpees, one session", r: "No breaks longer than a minute. One continuous video." },
+  { t: "1-minute cold shower", r: "Fully cold, head under. Timer visible on camera." },
+  { t: "2-minute wall sit", r: "Thighs as close to parallel as you can. Timer in frame." },
+  { t: "2-minute plank", r: "Forearm plank. Breaks allowed, timer in frame." },
+  { t: "40 jump squats", r: "Feet leave the floor every rep." },
+  { t: "30 push-ups while singing", r: "Sing between every set of 10. Loud enough to hear." },
+];
+const PUNISH = (window.SIDEGAINS_CONFIG || {}).level === "standard" ? PUNISH_STANDARD : PUNISH_STARTER;
 const weekOf = k => { const d = dateOf(k); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return keyOf(d); };
 const fallbackPunishment = (wk, uid) => PUNISH[Math.floor(rngFor("pen:" + wk + ":" + uid)() * PUNISH.length)];
 /* players propose punishments during a week and vote; the most-voted idea punishes that week's last place */
