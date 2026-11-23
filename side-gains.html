@@ -406,6 +406,7 @@ main > section:not([hidden]) { animation: rise .45s cubic-bezier(.2,.8,.2,1) bot
 .rv-stage { position: relative; z-index: 2; display: grid; gap: 16px; justify-items: center; text-align: center; width: min(420px, 100%); }
 .rv.shake-screen .rv-stage { animation: shake .45s; }
 .rv-eyebrow { font-family: var(--f-display); letter-spacing: .28em; text-transform: uppercase; font-weight: 700; color: rgba(255,255,255,.7); font-size: .85rem; text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+.rv-step:focus { outline: none; }
 .rv-step { display: grid; gap: 14px; justify-items: center; width: 100%; border: 0; background: none; color: inherit; padding: 0; cursor: pointer; font: inherit; }
 .rv-crate { width: min(270px, 72vw); height: auto; filter: drop-shadow(0 0 44px color-mix(in srgb, var(--rv, #6b93ff) 75%, transparent)); animation: bob 2.2s ease-in-out infinite; }
 .rv-crate.shake { animation: shake .42s infinite; }
@@ -432,6 +433,40 @@ main > section:not([hidden]) { animation: rise .45s cubic-bezier(.2,.8,.2,1) bot
 @media (max-height: 640px) { .rv-win, .rv-item { height: 180px; } .rv-item .fig { height: 110px; } .rv-crate { width: min(200px, 55vw); } }
 .modal-box .coach-fig { max-width: none; }
 
+/* header actions: sound + notifications */
+.hdr-actions { display: flex; gap: 6px; margin-left: auto; }
+.icon-btn { position: relative; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.icon-btn:hover { border-color: var(--muted); }
+.icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#sound-btn .mute { display: none; }
+#sound-btn[aria-pressed="false"] .mute { display: inline; }
+#sound-btn[aria-pressed="false"] .wave { display: none; }
+#sound-btn[aria-pressed="false"] { color: var(--muted); }
+.icon-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+
+/* switches in the notification dialog */
+.switch-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.switch-row input { position: absolute; opacity: 0; pointer-events: none; }
+.switch-row .sw { width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; }
+.switch-row .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .25s cubic-bezier(.3,1.4,.5,1); }
+.switch-row input:checked + .sw { background: var(--good); }
+.switch-row input:checked + .sw::after { transform: translateX(18px); }
+.switch-row input:focus-visible + .sw { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch-row b { display: block; }
+.switch-row small { color: var(--muted); }
+.np-status { margin: 0; font-size: .9rem; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.np-status[data-on="true"] { color: var(--good); }
+
+/* login / sign-up tabs */
+.auth-seg { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+.auth-seg button { padding: 8px 10px; }
+
+/* mystery silhouette */
+.mfig { width: 100%; height: auto; display: block; overflow: visible; --mf-glow: var(--accent); }
+.rv .mfig { --mf-glow: #8fb0ff; }
+.rv-crate { width: min(260px, 66vw); }
+.crate.mfig { width: min(220px, 58vw); filter: drop-shadow(0 14px 26px color-mix(in srgb, var(--accent) 45%, transparent)); }
+
 @media (max-width: 520px) {
   .top-in { gap: 8px 12px; }
   .tabs { order: 3; flex-basis: 100%; }
@@ -453,6 +488,15 @@ main > section:not([hidden]) { animation: rise .45s cubic-bezier(.2,.8,.2,1) bot
       <a href="#life" data-view="life">Life</a>
       <a href="#log" data-view="log">Log</a>
     </nav>
+    <div class="hdr-actions">
+      <button type="button" class="icon-btn" id="sound-btn" aria-pressed="true" aria-label="Sound effects" title="Mute sounds">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/><path class="mute" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="notif-btn" aria-label="Notification settings" title="Notifications">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>
+        <i class="icon-dot" id="notif-dot" hidden></i>
+      </button>
+    </div>
     <div class="me" id="me"></div>
   </div>
 </header>
@@ -890,7 +934,7 @@ const fmtTime = ms => new Date(ms).toLocaleTimeString(undefined, { hour: "numeri
 /* ---------- state ---------- */
 const S = {
   mode: "boot", db: null, user: null, assets: null, uid: null, isOwner: false, canWrite: null,
-  members: {}, subs: {}, votes: {}, quests: {}, pens: {}, ideas: {}, ivotes: {}, habits: {},
+  members: {}, subs: {}, votes: {}, quests: {}, pens: {}, ideas: {}, ivotes: {}, habits: {}, push: {}, seenSubs: new Set(), subsSeeded: false,
   confirmed: {}, slow: false, err: null,
   range: "week", busy: false, view: "today", day: todayKey(),
 };
@@ -1067,6 +1111,7 @@ function render() {
   if (S.lastMine === "pending" && st === "approved") { confetti(); toast(`Approved! ${ord(mine.place)} place, +${mine.points} points`); }
   S.lastMine = st;
   hydrateMedia();
+  checkNewSubs(C);
   if (S.revealDay !== todayKey()) { S.revealDay = todayKey(); S.revealOffered = false; }
   if (phase() === "open" && !S.revealOffered && !revealSeen() && !$("#reveal")) { S.revealOffered = true; openReveal(); }
 }
@@ -1082,7 +1127,7 @@ function renderNote() {
   let html = "";
   if (S.loadFail) html = "<strong>Couldn't reach the login service.</strong> Check your connection and reload the page.";
   else if (S.mode === "offline") html = "<strong>You're viewing a preview.</strong> No database is connected yet. See the README for the 10-minute Supabase setup, then reload.";
-  else if (S.mode === "signin") html = "<strong>Members only.</strong> Sign in with the email the crew owner invited, and you'll get a one-tap login link.";
+  else if (S.mode === "signin") html = "<strong>Join the crew.</strong> Log in, or create an account with a username and password.";
   else if (S.err) html = "<strong>Lost the connection to the group's data.</strong> Reload the page to reconnect.";
   else if (S.slow) html = "<strong>Still loading the group's data.</strong> Scores may be out of date until it arrives.";
   else if (S.mode === "live" && S.canWrite === false) html = "<strong>You can watch but not compete yet.</strong> Ask the owner to share this page with you as an <strong>Editor</strong> so you can submit and vote.";
@@ -1101,7 +1146,7 @@ function renderQuest() {
     el.innerHTML = `
       <div class="q-band"><span><span class="pips" aria-hidden="true"><i></i><i></i><i></i><i></i></span>Mystery quest</span><span class="when">${esc(fmtDay(today))}</span></div>
       <div class="mystery">
-        <img class="crate" src="${ART.crate || ""}" alt="Locked mystery crate">
+        ${mysteryFigure("crate")}
         <h1>Today's quest is <span class="qmarks">locked</span></h1>
         <p class="muted" style="margin:0;max-width:34ch">Nobody knows the move until it drops at ${OPEN_LABEL}. Be here when it opens: the first approved finisher gets +50%.</p>
         <div class="rar-tease" aria-label="Could be any rarity"><span>Common</span><span>Rare</span><span>Epic</span><span>Legendary</span></div>
@@ -1147,14 +1192,21 @@ function renderSubmit(C) {
   if (S.mode === "boot") { el.innerHTML = `<h2>Your run</h2><p class="muted">Connecting…</p>`; return; }
   if (S.mode === "offline") { el.innerHTML = `<h2>Your run</h2><p class="muted">Connect a database to submit videos. Setup steps are in the README.</p>`; return; }
   if (S.mode === "signin") {
-    if (el.querySelector("#signin-form") || S.linkSent) return;
+    if (el.querySelector("#signin-form")) return;
+    const signup = S.authMode === "signup";
     el.innerHTML = `
-      <h2>Sign in</h2>
-      <form id="signin-form" class="field" style="gap:12px">
-        <label for="si-email">Your email</label>
-        <input type="text" id="si-email" inputmode="email" autocomplete="email" required placeholder="you@example.com">
+      <div class="seg auth-seg" role="group" aria-label="Account">
+        <button type="button" data-auth="login" aria-pressed="${!signup}">Log in</button>
+        <button type="button" data-auth="signup" aria-pressed="${signup}">Create account</button>
+      </div>
+      <form id="signin-form" class="field" style="gap:12px" data-mode="${signup ? "signup" : "login"}">
+        <div class="field"><label for="si-user">Username</label>
+          <input type="text" id="si-user" autocomplete="username" autocapitalize="none" spellcheck="false" required maxlength="20" placeholder="e.g. ironmike"></div>
+        <div class="field"><label for="si-pass">Password</label>
+          <input type="password" id="si-pass" autocomplete="${signup ? "new-password" : "current-password"}" required minlength="6" placeholder="${signup ? "At least 6 characters" : "Your password"}"></div>
+        ${signup ? `<p class="muted small" style="margin:0">Your username is also the name on the leaderboard. You can change the display name later.</p>` : ""}
         <p class="err" id="si-err" hidden></p>
-        <button class="btn primary big" type="submit" id="si-btn">Email me a login link</button>
+        <button class="btn primary big" type="submit" id="si-btn">${signup ? "Create account" : "Log in"}</button>
       </form>`;
     return;
   }
@@ -1162,6 +1214,13 @@ function renderSubmit(C) {
   if (!S.members[S.uid]) {
     if (!S.confirmed.members) { el.innerHTML = `<h2>Your run</h2><p class="muted">Loading the crew…</p>`; return; }
     if (S.canWrite === false) { el.innerHTML = `<h2>Join the crew</h2><p class="muted">You need Editor access to join. Ask the owner to share this page with you as an Editor.</p>`; return; }
+    if (S.autoName && S.db && !S.autoJoining) {
+      S.autoJoining = true;
+      S.db.doc("members/" + S.uid).set({ name: S.autoName.slice(0, 24), joined: Date.now() }).then(() => toast(`Welcome to the crew, ${S.autoName}`)).catch(() => { S.autoName = ""; scheduleRender(); });
+      el.innerHTML = `<h2>Your run</h2><p class="muted">Setting up your profile…</p>`;
+      return;
+    }
+    if (S.autoJoining && S.autoName) return;
     if (document.activeElement && document.activeElement.id === "j-name") return;
     el.innerHTML = `
       <h2>Join the crew</h2>
@@ -1594,20 +1653,71 @@ function renderHeat(C) {
 }
 
 /* ---------- confetti ---------- */
-function confetti() {
+/* confetti: palette and amount can follow the quest's rarity */
+const CONFETTI = {
+  common: { cols: ["#6b93ff", "#9db8ff", "#e7ecf2", "#3b5bdb", "#c7d2fe"], n: 150 },
+  rare: { cols: ["#38bdf8", "#22d3ee", "#7dd3fc", "#0ea5e9", "#e0f2fe", "#2dd4bf"], n: 210 },
+  epic: { cols: ["#a878ff", "#d946ef", "#f0abfc", "#7c3aed", "#c4b5fd", "#ec4899"], n: 280 },
+  legendary: { cols: ["#f2ac2e", "#fde047", "#fb923c", "#fff7cc", "#eab308", "#ffffff"], n: 380 },
+};
+let confettiParts = [], confettiRaf = 0, confettiRainUntil = 0, confettiRainCols = null;
+function confetti(opts = {}) {
   if (RM) return;
   const cv = $("#confetti"), ctx = cv.getContext("2d"), dpr = devicePixelRatio || 1;
-  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
+  if (cv.width !== innerWidth * dpr) { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const cs = getComputedStyle(document.documentElement);
-  const cols = ["--accent", "--r-legendary", "--r-epic", "--good", "--r-rare", "--water"].map(v => cs.getPropertyValue(v).trim());
-  const ps = Array.from({ length: 160 }, () => ({ x: innerWidth / 2 + (Math.random() - .5) * 120, y: innerHeight * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 14 - 4, r: Math.random() * 6 + 3, a: Math.random() * 6, va: (Math.random() - .5) * .4, c: cols[Math.floor(Math.random() * cols.length)] }));
-  const t0 = performance.now();
-  (function frame(t) {
-    const k = (t - t0) / 2600;
+  const cols = opts.cols || ["--accent", "--r-legendary", "--r-epic", "--good", "--r-rare", "--water"].map(v => cs.getPropertyValue(v).trim());
+  const n = opts.n || 160, ox = innerWidth / 2, oy = innerHeight * (opts.y || .35);
+  const make = (x, y, vx, vy) => ({ x, y, vx, vy, r: Math.random() * 7 + 4, a: Math.random() * 6, va: (Math.random() - .5) * .45, w: Math.random() * Math.PI, c: cols[Math.floor(Math.random() * cols.length)], shape: Math.random() < .25 ? 1 : 0, life: 1 });
+  for (let i = 0; i < n; i++) { const ang = Math.random() * Math.PI * 2, sp = Math.random() * 15 + 4; confettiParts.push(make(ox + (Math.random() - .5) * 60, oy, Math.cos(ang) * sp, Math.sin(ang) * sp - 7)); }
+  if (opts.rain) { confettiRainUntil = performance.now() + opts.rain; confettiRainCols = cols; }
+  if (confettiRaf) return;
+  const frame = t => {
     ctx.clearRect(0, 0, innerWidth, innerHeight);
-    for (const p of ps) { p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - k); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); ctx.restore(); }
-    if (k < 1) requestAnimationFrame(frame); else ctx.clearRect(0, 0, innerWidth, innerHeight);
-  })(t0);
+    if (t < confettiRainUntil && Math.random() < .55) { const rc = confettiRainCols; for (let i = 0; i < 2; i++) { const p = make(Math.random() * innerWidth, -10, (Math.random() - .5) * 2, Math.random() * 2 + 1); p.c = rc[Math.floor(Math.random() * rc.length)]; confettiParts.push(p); } }
+    confettiParts = confettiParts.filter(p => p.y < innerHeight + 30 && p.life > 0);
+    for (const p of confettiParts) {
+      p.vy += .3; p.vx *= .985; p.vy *= .985; p.x += p.vx + Math.sin(p.w += .08) * .8; p.y += p.vy; p.a += p.va;
+      if (p.vy > 4.5) p.vy = 4.5;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.scale(1, Math.abs(Math.cos(p.w)) * .8 + .2); ctx.fillStyle = p.c;
+      if (p.shape) { ctx.beginPath(); ctx.arc(0, 0, p.r / 2.4, 0, Math.PI * 2); ctx.fill(); } else ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2);
+      ctx.restore();
+    }
+    if (confettiParts.length || t < confettiRainUntil) confettiRaf = requestAnimationFrame(frame);
+    else { confettiRaf = 0; ctx.clearRect(0, 0, innerWidth, innerHeight); }
+  };
+  confettiRaf = requestAnimationFrame(frame);
+}
+function stopConfettiRain() { confettiRainUntil = 0; }
+
+/* mystery silhouette: Figma-generated flexing athlete, filled with drifting "?" marks and shading */
+const FLEX_PATH = "M256 60C238 60 226 70 224 87C223 96 224 105 225 112C219 110 219 121 223 128C225 132 228 132 230 132C234 146 240 152 240 159L239 169C224 172 210 176 198 182C186 175 174 173 164 177C155 164 143 157 130 159C120 160 113 166 108 173C110 155 119 140 129 128C137 126 143 121 148 114C152 109 153 103 150 98L143 85C140 80 135 78 130 80C125 75 120 76 116 79C110 77 105 80 103 84C96 84 92 89 92 95L91 112C79 124 68 139 58 156C49 171 40 187 39 200C37 212 43 221 54 227C65 234 79 234 92 230C110 240 132 239 147 230C158 224 165 218 171 216C176 231 180 250 185 268C190 287 198 302 201 320C204 340 202 361 199 382C197 400 196 421 197 449C214 453 235 455 256 455C277 455 298 453 315 449C316 421 315 400 313 382C310 361 308 340 311 320C314 302 322 287 327 268C332 250 336 231 341 216C347 218 354 224 365 230C380 239 402 240 420 230C433 234 447 234 458 227C469 221 475 212 473 200C472 187 463 171 454 156C444 139 433 124 421 112L420 95C420 89 416 84 409 84C407 80 402 77 396 79C392 76 387 75 382 80C377 78 372 80 369 85L362 98C359 103 360 109 364 114C369 121 375 126 383 128C393 140 402 155 404 173C399 166 392 160 382 159C369 157 357 164 348 177C338 173 326 175 314 182C302 176 288 172 273 169L272 159C272 152 278 146 282 132C284 132 287 132 289 128C293 121 293 110 287 112C288 105 289 96 288 87C286 70 274 60 256 60Z";
+let mysteryN = 0;
+function mysteryFigure(cls = "") {
+  const id = "mf" + (++mysteryN);
+  return `<svg class="mfig ${cls}" viewBox="24 44 464 426" role="img" aria-label="Mystery athlete silhouette">
+    <defs>
+      <clipPath id="${id}c"><path d="${FLEX_PATH}"/></clipPath>
+      <radialGradient id="${id}s" cx="50%" cy="30%" r="75%"><stop offset="0" stop-color="#2a3550"/><stop offset=".55" stop-color="#121a2a"/><stop offset="1" stop-color="#05070c"/></radialGradient>
+      <linearGradient id="${id}r" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--mf-glow, #6b93ff)" stop-opacity=".55"/><stop offset=".45" stop-color="var(--mf-glow, #6b93ff)" stop-opacity="0"/><stop offset="1" stop-color="#a878ff" stop-opacity=".35"/></linearGradient>
+      <linearGradient id="${id}f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".6" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity=".15"/></linearGradient>
+      <mask id="${id}m"><rect x="0" y="0" width="512" height="512" fill="url(#${id}f)"/></mask>
+      <pattern id="${id}p" width="44" height="44" patternUnits="userSpaceOnUse" patternTransform="rotate(-14)">
+        <text x="5" y="34" font-family="Barlow Condensed, Arial Narrow, Arial, sans-serif" font-weight="800" font-size="34" fill="#9db8ff">?</text>
+        <text x="27" y="16" font-family="Barlow Condensed, Arial Narrow, Arial, sans-serif" font-weight="800" font-size="17" fill="#c4b5fd" opacity=".8">?</text>
+        <animateTransform attributeName="patternTransform" type="translate" additive="sum" from="0 0" to="0 -44" dur="6s" repeatCount="indefinite"/>
+      </pattern>
+    </defs>
+    <ellipse cx="256" cy="458" rx="120" ry="10" fill="#000" opacity=".35"/>
+    <g clip-path="url(#${id}c)">
+      <rect x="0" y="0" width="512" height="512" fill="url(#${id}s)"/>
+      <rect x="0" y="0" width="512" height="512" fill="url(#${id}p)" opacity=".42" mask="url(#${id}m)"/>
+      <rect x="0" y="0" width="512" height="512" fill="url(#${id}r)"/>
+    </g>
+    <path d="${FLEX_PATH}" fill="none" stroke="var(--mf-glow, #6b93ff)" stroke-width="3" opacity=".75"/>
+    <text x="256" y="121" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, Arial, sans-serif" font-weight="800" font-size="56" fill="#fff" opacity=".92">?</text>
+  </svg>`;
 }
 
 /* ---------- daily reveal: crate, slot reel, rarity reel, count-up ---------- */
@@ -1615,14 +1725,54 @@ const RV_COL = { common: "#6b93ff", rare: "#38bdf8", epic: "#a878ff", legendary:
 const seenKey = () => "sg-reveal-" + todayKey();
 function revealSeen() { try { return localStorage.getItem(seenKey()) === "1" || S.revealedMem === todayKey(); } catch (e) { return S.revealedMem === todayKey(); } }
 function markSeen() { S.revealedMem = todayKey(); try { localStorage.setItem(seenKey(), "1"); } catch (e) {} }
+/* ---------- sound effects (synthesized, no files) ---------- */
 let audioCtx = null;
-function beep(freq, dur = .04, vol = .04, type = "square") {
+const SOUND = { on: true };
+try { SOUND.on = localStorage.getItem("sg-sound") !== "off"; } catch (e) {}
+function tone(freq, dur = .05, vol = .04, type = "sine", when = 0, slideTo = 0) {
+  if (!SOUND.on) return;
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime;
-    o.type = type; o.frequency.value = freq; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + dur + .02);
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + when;
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + dur + .03);
   } catch (e) {}
+}
+function beep(freq, dur = .04, vol = .04, type = "square") { tone(freq, dur, vol, type); }
+const sfx = {
+  tap: () => tone(1350, .03, .018, "sine"),
+  tab: () => { tone(420, .06, .03, "triangle", 0, 640); tone(860, .05, .02, "sine", .045); },
+  on: () => { tone(660, .07, .04, "triangle"); tone(990, .1, .04, "triangle", .06); },
+  off: () => { tone(520, .07, .035, "triangle"); tone(350, .1, .03, "triangle", .06); },
+  yes: () => [523, 784, 1047].forEach((f, i) => tone(f, .13, .045, "triangle", i * .065)),
+  no: () => tone(240, .22, .05, "sawtooth", 0, 110),
+  water: () => { tone(260, .16, .05, "sine", 0, 760); tone(900, .05, .02, "sine", .14); },
+  success: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, .05, "triangle", i * .08)),
+  error: () => { tone(190, .12, .05, "square"); tone(150, .16, .05, "square", .12); },
+  notify: () => { tone(880, .14, .045, "sine"); tone(1320, .22, .04, "sine", .11); },
+  go: () => { tone(392, .1, .05, "square"); tone(784, .25, .05, "square", .09); },
+};
+document.addEventListener("click", e => {
+  const t = e.target.closest("button, a, [role=button]");
+  if (!t || t.disabled) return;
+  if (t.closest("#reveal") && !t.matches("#rv-go, #rv-skip")) return;
+  if (t.matches("[data-vote]")) return Number(t.dataset.val) > 0 ? sfx.yes() : sfx.no();
+  if (t.matches("[data-ivote]")) return sfx.yes();
+  if (t.matches("[data-habit]")) return t.getAttribute("aria-pressed") === "true" ? sfx.off() : sfx.on();
+  if (t.matches("[data-water]")) return sfx.water();
+  if (t.matches(".tabs a")) return sfx.tab();
+  if (t.matches("#rv-go")) return sfx.go();
+  if (t.matches("#sound-btn")) return;
+  sfx.tap();
+}, true);
+function setSound(on) {
+  SOUND.on = on;
+  try { localStorage.setItem("sg-sound", on ? "on" : "off"); } catch (e) {}
+  const b = $("#sound-btn"); if (b) { b.setAttribute("aria-pressed", String(on)); b.title = on ? "Mute sounds" : "Turn sounds on"; }
+  if (on) sfx.on();
 }
 const buzz = p => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1637,13 +1787,12 @@ function openReveal() {
   const el = document.createElement("div");
   el.className = "rv"; el.id = "reveal"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Today's quest reveal");
   el.innerHTML = `
-    <img class="rv-burst" src="${ART.burst || ""}" alt="">
     <div class="rv-flash"></div>
     <button type="button" class="rv-skip" id="rv-skip">Skip</button>
     <div class="rv-stage">
       <div class="rv-eyebrow">${esc(fmtDay(todayKey()))} · Daily quest</div>
       <div class="rv-step" id="rv-s1" role="button" tabindex="0" aria-label="Open the crate">
-        <img class="rv-crate" id="rv-crate" src="${ART.crate || ""}" alt="">
+        <div class="rv-crate" id="rv-crate">${mysteryFigure()}</div>
         <div class="rv-tap" id="rv-tap">Tap to open</div>
       </div>
       <div class="rv-step rv-slot" id="rv-s2" hidden>
@@ -1661,7 +1810,7 @@ function openReveal() {
   s1.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); start(); } });
   $("#rv-skip").addEventListener("click", () => finishReveal(el, q, true));
   $("#rv-go").addEventListener("click", () => closeReveal(el));
-  if (RM) finishReveal(el, q, true); else s1.focus();
+  if (RM) finishReveal(el, q, true);
 }
 
 async function runReveal(el, q) {
@@ -1737,15 +1886,131 @@ function finishReveal(el, q, skipped) {
       const fl = el.querySelector(".rv-flash"); fl.classList.remove("on"); void fl.offsetWidth; fl.classList.add("on");
       el.classList.add("shake-screen"); buzz([70, 40, 140]);
       [523, 659, 784, 1047, 1319].forEach((fq, i) => setTimeout(() => beep(fq, .22, .05, "triangle"), i * 85));
-      confetti();
+      const cp = CONFETTI[q.rarity] || CONFETTI.common;
+      confetti({ cols: cp.cols, n: cp.n, y: .42, rain: q.rarity === "legendary" ? 9000 : 6000 });
+      if (q.rarity === "legendary" || q.rarity === "epic") setTimeout(() => confetti({ cols: cp.cols, n: Math.round(cp.n / 2), y: .3 }), 450);
     }
     $("#rv-go").hidden = false; $("#rv-skip").hidden = true; $("#rv-go").focus();
   }, skipped ? 0 : 1000);
 }
 
 function closeReveal(el) {
+  stopConfettiRain();
   el.classList.add("leaving");
   setTimeout(() => { el.remove(); document.documentElement.style.overflow = ""; $("#quest").dataset.qk = ""; scheduleRender(); }, 300);
+}
+
+/* ---------- notifications: preferences, web push (GitHub/Supabase version), in-app alerts ---------- */
+const NPREF_KEY = "sg-notif-prefs";
+function getPrefs() {
+  const own = S.push && S.uid && S.push[S.uid] && S.push[S.uid].prefs;
+  let local = {};
+  try { local = JSON.parse(localStorage.getItem(NPREF_KEY) || "{}"); } catch (e) {}
+  const pick = k => (own && typeof own[k] === "boolean" ? own[k] : typeof local[k] === "boolean" ? local[k] : true);
+  return { quest: pick("quest"), videos: pick("videos") };
+}
+const pushCapable = () => !!(S.sb && window.isSecureContext && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window);
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const subHash = ep => { let h = 0; for (const c of ep) h = (h * 31 + c.charCodeAt(0)) >>> 0; return "d" + h.toString(36); };
+function b64ToU8(b64) { const pad2 = "=".repeat((4 - b64.length % 4) % 4); const raw = atob((b64 + pad2).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, c => c.charCodeAt(0)); }
+async function savePush(mut) {
+  if (!S.db || !S.uid) return;
+  const path = "push/" + S.uid;
+  await queueWrite(path, () => {
+    const cur = JSON.parse(JSON.stringify((S.push && S.push[S.uid]) || {}));
+    const next = mut(cur);
+    next.tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    next.openHour = OPEN_HOUR; next.closeHour = CLOSE_HOUR;
+    return S.db.doc(path).set(next);
+  });
+}
+async function currentSub() {
+  if (!pushCapable()) return null;
+  try { const reg = await navigator.serviceWorker.getRegistration("sw.js"); return reg ? await reg.pushManager.getSubscription() : null; } catch (e) { return null; }
+}
+async function enablePush() {
+  if (!pushCapable()) throw new Error("unsupported");
+  if (isIOS() && !isStandalone()) throw new Error("ios-home");
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") throw new Error("denied");
+  const reg = await navigator.serviceWorker.register("sw.js");
+  await navigator.serviceWorker.ready;
+  const { data, error } = await S.sb.functions.invoke("notify", { body: { action: "key" } });
+  if (error || !data || !data.publicKey) throw new Error("server");
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToU8(data.publicKey) });
+  const json = sub.toJSON(), prefs = getPrefs();
+  await savePush(d => { d.subs = d.subs || {}; d.subs[subHash(json.endpoint)] = json; d.prefs = prefs; return d; });
+  return true;
+}
+async function disablePush() {
+  const sub = await currentSub();
+  if (sub) { const h = subHash(sub.endpoint); try { await sub.unsubscribe(); } catch (e) {} await savePush(d => { if (d.subs) delete d.subs[h]; return d; }); }
+}
+async function setPref(k, v) {
+  const p = getPrefs(); p[k] = v;
+  try { localStorage.setItem(NPREF_KEY, JSON.stringify(p)); } catch (e) {}
+  if (S.push && S.uid && S.push[S.uid]) { try { await savePush(d => { d.prefs = p; return d; }); } catch (e) { toast(dbErrMsg(e)); } }
+}
+async function notifStatus() {
+  const el = $("#np-status"); if (!el) return;
+  const btn = $("#np-enable"), test = $("#np-test");
+  let msg = "", on = false;
+  if (!S.sb) msg = "Phone notifications work on the GitHub site. Here you still get sounds and pop-ups while the page is open.";
+  else if (!pushCapable()) msg = "This browser can't receive notifications. Try Chrome, or on iPhone add the site to your Home Screen first.";
+  else if (isIOS() && !isStandalone()) msg = "On iPhone: tap Share, then Add to Home Screen. Open Side Gains from your Home Screen and turn notifications on there.";
+  else if (Notification.permission === "denied") msg = "Notifications are blocked for this site. Allow them in your browser's site settings, then come back.";
+  else { on = !!(await currentSub()); msg = on ? "Notifications are on for this device." : "Notifications are off for this device."; }
+  el.textContent = msg; el.dataset.on = String(on);
+  const can = S.sb && pushCapable() && !(isIOS() && !isStandalone()) && Notification.permission !== "denied";
+  btn.hidden = !can; btn.textContent = on ? "Turn off on this device" : "Turn on for this device"; btn.dataset.on = String(on);
+  test.hidden = !on;
+}
+function notifDialog() {
+  const p = getPrefs();
+  openModal(`<div class="panel-h"><h2>Notifications</h2></div>
+    <p class="muted small" style="margin:0">Choose what you want to hear about.</p>
+    <label class="switch-row" for="np-quest"><input type="checkbox" id="np-quest" ${p.quest ? "checked" : ""}><span class="sw" aria-hidden="true"></span><span><b>New quest drops</b><small>When the mystery quest opens at ${OPEN_LABEL}</small></span></label>
+    <label class="switch-row" for="np-videos"><input type="checkbox" id="np-videos" ${p.videos ? "checked" : ""}><span class="sw" aria-hidden="true"></span><span><b>New videos to judge</b><small>When someone in the crew submits</small></span></label>
+    <p class="np-status" id="np-status">Checking this device…</p>
+    <div class="row end"><button type="button" class="btn ghost" id="np-test" hidden>Send a test</button><button type="button" class="btn" data-close>Close</button><button type="button" class="btn primary" id="np-enable" hidden>Turn on for this device</button></div>`);
+  notifStatus();
+}
+document.addEventListener("change", e => {
+  if (e.target.id === "np-quest") { setPref("quest", e.target.checked); e.target.checked ? sfx.on() : sfx.off(); }
+  if (e.target.id === "np-videos") { setPref("videos", e.target.checked); e.target.checked ? sfx.on() : sfx.off(); }
+});
+document.addEventListener("click", async e => {
+  if (e.target.closest("#notif-btn")) { notifDialog(); return; }
+  if (e.target.closest("#sound-btn")) { setSound(!SOUND.on); return; }
+  const en = e.target.closest("#np-enable");
+  if (en) {
+    en.disabled = true;
+    try {
+      if (en.dataset.on === "true") { await disablePush(); toast("Notifications turned off on this device"); }
+      else { await enablePush(); sfx.success(); toast("Notifications are on"); }
+    } catch (err) {
+      sfx.error();
+      const m = err && err.message;
+      toast(m === "denied" ? "Permission wasn't granted, so notifications stay off." : m === "ios-home" ? "Add Side Gains to your Home Screen first, then try again from there." : m === "server" ? "Couldn't reach the notification service. Try again in a minute." : "Couldn't turn on notifications on this device.");
+    }
+    en.disabled = false; notifStatus(); return;
+  }
+  if (e.target.closest("#np-test")) {
+    try { const { data } = await S.sb.functions.invoke("notify", { body: { action: "test" } }); toast(data && data.sent ? "Test sent. Check your notifications." : "No device to send to yet."); }
+    catch (err) { toast("Couldn't send a test right now."); }
+  }
+});
+/* in-app alert when someone else submits today (works on both versions while the page is open) */
+function checkNewSubs(C) {
+  const todays = C.byDate[todayKey()] || [];
+  if (!S.subsSeeded) { if (S.confirmed.subs && S.confirmed.members) { todays.forEach(s => S.seenSubs.add(s.key)); S.subsSeeded = true; } return; }
+  for (const s of todays) {
+    if (S.seenSubs.has(s.key)) continue;
+    S.seenSubs.add(s.key);
+    if (s.uid !== S.uid && getPrefs().videos) { sfx.notify(); toast(`${nameOf(s.uid)} just submitted. Go judge it!`); }
+  }
 }
 
 /* ---------- countdown + day rollover ---------- */
@@ -1862,6 +2127,7 @@ document.addEventListener("click", async e => {
     } catch (err) { toast(dbErrMsg(err)); }
     return;
   }
+  const au = e.target.closest("[data-auth]"); if (au) { S.authMode = au.dataset.auth; $("#submit").innerHTML = ""; renderSubmit(compute()); return; }
   if (e.target.closest("#replay-reveal")) { openReveal(); return; }
   if (e.target.closest("#me-btn")) { renameDialog(); return; }
   if (e.target.closest("#signout-btn")) { await S.sb.auth.signOut(); location.replace(location.origin + location.pathname); return; }
@@ -1901,18 +2167,27 @@ document.addEventListener("submit", async e => {
     catch (err) { toast(dbErrMsg(err)); }
   }
   if (id === "signin-form") {
-    const email = $("#si-email").value.trim(), errEl = $("#si-err"), btn = $("#si-btn");
-    if (!/^\S+@\S+\.\S+$/.test(email)) { errEl.textContent = "Enter a valid email address."; errEl.hidden = false; return; }
-    btn.disabled = true; btn.textContent = "Sending…";
-    const { error } = await S.sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } });
-    if (error) {
-      btn.disabled = false; btn.textContent = "Email me a login link";
-      errEl.textContent = /signups? not allowed|not found|otp_disabled/i.test(error.message) ? "That email isn't on the crew list. Ask the owner to invite you." : /rate|seconds/i.test(error.message) ? "Too many attempts. Wait a minute, then try again." : "Couldn't send the link. Check the address and try again.";
-      errEl.hidden = false; return;
+    const signup = e.target.dataset.mode === "signup";
+    const raw = $("#si-user").value.trim(), pass = $("#si-pass").value, errEl = $("#si-err"), btn = $("#si-btn");
+    const fail = m => { errEl.textContent = m; errEl.hidden = false; sfx.error(); btn.disabled = false; btn.textContent = signup ? "Create account" : "Log in"; };
+    errEl.hidden = true;
+    const isEmail = raw.includes("@");
+    const user = raw.toLowerCase();
+    if (!isEmail && !/^[a-z0-9_.-]{3,20}$/.test(user)) return fail("Usernames are 3–20 characters: letters, numbers, dots, dashes or underscores.");
+    if (pass.length < 6) return fail("Passwords need at least 6 characters.");
+    const email = isEmail ? user : `${user}@${USER_DOMAIN}`;
+    btn.disabled = true; btn.textContent = signup ? "Creating…" : "Logging in…";
+    if (signup) {
+      if (isEmail) return fail("Pick a username without an @ sign.");
+      const { data, error } = await S.sb.auth.signUp({ email, password: pass, options: { data: { username: user } } });
+      if (error) return fail(/already|registered|exists/i.test(error.message) ? "That username is taken. Try another one." : /signups? not allowed|disabled/i.test(error.message) ? "Sign-ups are closed right now. Ask the crew owner." : /password/i.test(error.message) ? "That password is too weak. Use at least 6 characters." : "Couldn't create the account. Try again.");
+      if (!data.session) return fail("Account created, but it needs confirming. Ask the crew owner to turn off email confirmation.");
+    } else {
+      const { error } = await S.sb.auth.signInWithPassword({ email, password: pass });
+      if (error) return fail(/invalid|credentials/i.test(error.message) ? "Wrong username or password." : /confirm/i.test(error.message) ? "This account isn't confirmed yet. Ask the crew owner." : "Couldn't log in. Try again.");
     }
-    S.linkSent = true;
-    $("#submit").innerHTML = `<h2>Check your inbox</h2><p class="muted" style="margin:0">We sent a login link to <b></b>. Open it on this device to sign in. Check your spam folder if it doesn't show up.</p>`;
-    $("#submit b").textContent = email;
+    sfx.success();
+    location.replace(location.origin + location.pathname);
     return;
   }
   if (id === "idea-form") {
@@ -1968,6 +2243,8 @@ async function submitRun(p, coll, slot, replace) {
     });
     S.busy = false;
     toast("Submitted. The crew will judge it.");
+    sfx.success();
+    if (coll === "subs" && S.sb) S.sb.functions.invoke("notify", { body: { action: "video" } }).catch(() => {});
     scheduleRender();
   } catch (err) {
     S.busy = false; btn.disabled = false; btn.textContent = label;
@@ -1990,6 +2267,8 @@ route();
    1. claude.ai artifact runtime (db + assets + user capabilities)
    2. Supabase (Postgres table `docs`, Storage bucket `videos`, email magic-link auth) for the standalone GitHub version */
 const CFG = window.SIDEGAINS_CONFIG || {};
+/* usernames are stored as <name>@safi230r.github.io; GitHub Pages domains receive no mail, so no emails go anywhere */
+const USER_DOMAIN = "safi230r.github.io";
 const SUPABASE_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";
 const maxMB = () => (S.sb ? 50 : 20);
 const urlCache = {};
@@ -2090,6 +2369,7 @@ async function bootSupabase() {
   });
   if (!session) { S.mode = "signin"; render(); return null; }
   S.uid = session.user.id;
+  S.autoName = (session.user.user_metadata && session.user.user_metadata.username) || "";
   const { data: adm } = await sb.from("admins").select("uid").eq("uid", S.uid).maybeSingle();
   S.isOwner = !!adm; S.canWrite = true;
   S.assets = supabaseAssets(sb);
@@ -2116,12 +2396,15 @@ async function boot() {
       }
     }
   } else if (CFG.supabaseUrl && CFG.supabaseAnonKey) {
+    /* installable app (needed for notifications on iPhone): manifest, home-screen icon, theme colour */
+    for (const [rel, href] of [["manifest", "manifest.webmanifest"], ["apple-touch-icon", "icon-192.png"]]) { const l = document.createElement("link"); l.rel = rel; l.href = href; document.head.appendChild(l); }
+    for (const [name, content] of [["theme-color", "#1d4ed8"], ["apple-mobile-web-app-capable", "yes"], ["apple-mobile-web-app-title", "Side Gains"]]) { const m = document.createElement("meta"); m.name = name; m.content = content; document.head.appendChild(m); }
     db = await bootSupabase();
     if (!db) return;
   }
   if (!db) { S.mode = "offline"; render(); return; }
   S.db = db; S.mode = "live";
-  const names = ["members", "subs", "votes", "quests", "pens", "ideas", "ivotes", "habits"];
+  const names = ["members", "subs", "votes", "quests", "pens", "ideas", "ivotes", "habits", "push"];
   const timer = setTimeout(() => { if (names.some(n => !S.confirmed[n])) { S.slow = true; scheduleRender(); } }, 10000);
   for (const name of names) {
     db.collection(name).onSnapshot(snap => {

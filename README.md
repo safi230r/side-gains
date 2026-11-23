@@ -3,7 +3,9 @@
 Daily at-home calisthenics quests for a crew of friends.
 
 - **Daily quest:** everyone gets the same quest each day (Common → Legendary), one move a day, doable at home. It starts on the **starter** level (light and quick, about 2–5 minutes). When the crew is ready, set `level: "standard"` in `SIDEGAINS_CONFIG` for harder quests. Each quest is open for submissions from 12 PM to 10 PM, local time. To change the hours, edit `openHour` and `closeHour` (24-hour clock) in `SIDEGAINS_CONFIG` at the top of `side-gains.html`.
-- **Mystery drop:** the move stays hidden behind a locked crate until opening time. Then it's revealed with a slot-machine roll, with sound, haptics and confetti. The crate, app icon and burst artwork were generated in Figma.
+- **Mystery drop:** the move stays hidden behind a shadowy athlete covered in drifting question marks until opening time. Then it's revealed with a slot-machine roll, with sound, haptics and confetti in the rarity's colours. The silhouette, app icon and other artwork were generated in Figma.
+- **Sound effects:** synthesized clicks, chimes and fanfares across the app. Mute them with the speaker button in the header.
+- **Notifications:** each person chooses, from the bell button, whether to get a phone notification when the quest drops and when someone submits a video. On iPhone, add the site to your Home Screen first.
 - **Video proof:** film your set and upload it. The rest of the crew votes on whether it counts.
 - **Scoring:** fastest approved finishers get bonus points (+50% / +25% / +10%), plus a streak bonus.
 - **Weekly race:** a leaderboard with a live chart of points from Monday to Sunday.
@@ -21,7 +23,8 @@ The app has its own database, so it doesn't depend on any one person's device. I
 | --- | --- | --- |
 | Members, submissions, votes, punishments, habits | Postgres table `docs` | Signed-in crew only |
 | Videos | Private Storage bucket `videos`, up to 50 MB per file | Signed-in crew only |
-| Accounts | Supabase Auth, email login link, invite-only | You decide who's in |
+| Accounts | Supabase Auth, username and password | Anyone with the link can create an account |
+| Notification subscriptions | `docs` rows with `coll = 'push'` | Only that person (and the server) |
 
 Access rules (in [`supabase-schema.sql`](supabase-schema.sql)) make sure each person can only change their own entries and votes. Only admins can set custom quests.
 
@@ -33,9 +36,10 @@ Access rules (in [`supabase-schema.sql`](supabase-schema.sql)) make sure each pe
 1. Make a free account at [supabase.com](https://supabase.com) and create a new project.
 2. Open **SQL Editor → New query**, paste the contents of [`supabase-schema.sql`](supabase-schema.sql), and click **Run**.
 
-### 2. Make it invite-only
-1. Go to **Authentication → Sign In / Providers** and turn off **Allow new users to sign up**. Keep **Email** enabled.
-2. Go to **Authentication → Users → Add user → Send invitation** and invite yourself and each friend by email.
+### 2. Allow username sign-ups
+Go to **Authentication → Sign In / Providers**. Turn **on** "Allow new users to sign up" and turn **off** "Confirm email". People sign up with a username and password. Behind the scenes the username becomes `username@<your-github-domain>`, which never receives email.
+
+> There's no password reset by email. If someone forgets their password, delete them in **Authentication → Users** and let them sign up again, or set a new password there.
 
 ### 3. Connect the page
 1. Go to **Project Settings → API** and copy the **Project URL** and the **anon public** key.
@@ -56,12 +60,18 @@ Access rules (in [`supabase-schema.sql`](supabase-schema.sql)) make sure each pe
    - Add `https://<your-username>.github.io/<repo-name>/side-gains.html` under **Redirect URLs**.
 
 ### 5. Become the admin
-1. Open the site, sign in with your email link, and join the crew.
-2. In the Supabase SQL Editor, run:
+1. Open the site and create your account.
+2. In the Supabase SQL Editor, run this with your own username and domain:
    ```sql
-   insert into public.admins (uid) select id from auth.users where email = 'you@example.com';
+   insert into public.admins (uid) select id from auth.users where email = 'yourname@<your-username>.github.io';
    ```
 3. Reload the page. You'll see **Set a custom quest** on the quest card.
+
+### 6. Notifications (optional)
+1. The schema file already creates the key table and the 10-minute schedule.
+2. Go to **Edge Functions → Deploy a new function → Via editor**. Name it `notify`, paste [`notify-function.ts`](notify-function.ts), and deploy.
+3. In the function's **Settings**, turn **off** "Verify JWT". The function checks logins itself.
+4. [`sw.js`](sw.js), [`manifest.webmanifest`](manifest.webmanifest) and the `icon-*.png` files must sit next to `side-gains.html`.
 
 ## Free-tier limits to know about
 - **Storage:** 1 GB in total. That's roughly 50–100 short phone clips. Delete old videos from **Storage → videos** now and then, or paste YouTube or Drive links for long sets.
