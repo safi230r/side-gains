@@ -494,7 +494,7 @@ main > section:not([hidden]) { animation: rise .45s cubic-bezier(.2,.8,.2,1) bot
         <li><b>Speed bonus:</b> 1st approved finisher +50%, 2nd +25%, 3rd +10%. Order is by submission time.</li>
         <li><b>Streak bonus:</b> +10 per consecutive approved day after the first, up to +50.</li>
         <li><b>Approval:</b> a majority of the other members must vote it valid. A majority of rejections throws it out.</li>
-        <li><b>Hours:</b> each quest opens at 12 AM and closes at 10 PM (your local time). No late submissions.</li>
+        <li><b>Hours:</b> each quest opens at <span class="hours-open">12 PM</span> and closes at <span class="hours-close">10 PM</span> (your local time). No late or early submissions.</li>
         <li><b>Punishments:</b> when the week ends (Sunday midnight), whoever has the fewest weekly points has to do the punishment the crew voted for that week on the Punishment tab. Film it and let the crew judge it by the end of the next week, or lose 100 points.</li>
       </ul>
     </div>
@@ -512,8 +512,11 @@ main > section:not([hidden]) { animation: rise .45s cubic-bezier(.2,.8,.2,1) bot
 
 <script>
 /* Standalone setup: paste your Supabase project URL and anon (public) key here. See README.md.
-   Leave both empty when the page runs as a claude.ai artifact. */
+   On claude.ai the built-in storage is used instead, so these are ignored there.
+   openHour / closeHour: when the daily quest accepts submissions, in 24-hour local time (12 = 12 PM, 22 = 10 PM). */
 window.SIDEGAINS_CONFIG = {
+  openHour: 12,
+  closeHour: 22,
   supabaseUrl: "https://crljnytspdeltxvlohto.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNybGpueXRzcGRlbHR4dmxvaHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzODU2OTIsImV4cCI6MjExMDk2MTY5Mn0.i2ejphqGpXJWxnHK4jZut681zZyoY2521p612hYNztI",
 };
@@ -530,8 +533,14 @@ const RARITY = {
   legendary: { label: "Legendary", base: 800, pips: 4 },
 };
 const PODIUM = [0.5, 0.25, 0.1];
-const CLOSE_HOUR = 22; /* quests open at 00:00 and close at 22:00 local time */
-const isClosed = () => new Date().getHours() >= CLOSE_HOUR;
+/* submission window, local time; set in SIDEGAINS_CONFIG at the top of the file */
+const HCFG = window.SIDEGAINS_CONFIG || {};
+const OPEN_HOUR = Number.isInteger(HCFG.openHour) ? HCFG.openHour : 12;
+const CLOSE_HOUR = Number.isInteger(HCFG.closeHour) ? HCFG.closeHour : 22;
+const hourLabel = h => `${h % 12 || 12} ${h < 12 || h === 24 ? "AM" : "PM"}`;
+const OPEN_LABEL = hourLabel(OPEN_HOUR), CLOSE_LABEL = hourLabel(CLOSE_HOUR);
+const phase = () => { const h = new Date().getHours(); return h < OPEN_HOUR ? "before" : h >= CLOSE_HOUR ? "after" : "open"; };
+const isClosed = () => phase() !== "open";
 const STREAK_STEP = 10, STREAK_CAP = 50;
 const PROOF = {
   strength: "Film every rep. Cuts between sets are fine; keep your whole body in frame.",
@@ -1039,16 +1048,20 @@ function renderSubmit(C) {
     return;
   }
   if (isClosed() && !S.busy) {
-    el.innerHTML = `
+    const before = phase() === "before";
+    el.innerHTML = before ? `
+      <div class="panel-h"><h2>Opens at ${OPEN_LABEL}</h2><span class="chip pending">Not open yet</span></div>
+      <p class="muted" style="margin:0">Today's quest opens for submissions at ${OPEN_LABEL}, in <b class="num" id="next-quest"></b>. Read the form tips and get ready.</p>
+      <p class="muted small" style="margin:0">You can still judge the crew's videos below.</p>` : `
       <div class="panel-h"><h2>Quest closed</h2><span class="chip rejected">Closed</span></div>
-      <p class="muted" style="margin:0">Submissions close at 10 PM. The next quest drops at midnight, in <b class="num" id="next-quest"></b>.</p>
+      <p class="muted" style="margin:0">Submissions closed at ${CLOSE_LABEL}. Tomorrow's quest opens at ${OPEN_LABEL}, in <b class="num" id="next-quest"></b>.</p>
       <p class="muted small" style="margin:0">You can still judge the crew's videos below.</p>`;
     tick();
     return;
   }
   if (S.busy || $("#sub-form")) return;
   el.innerHTML = `
-    <div class="panel-h"><h2>Submit your run</h2><span class="sub">Open 12 AM – 10 PM</span></div>
+    <div class="panel-h"><h2>Submit your run</h2><span class="sub">Open ${OPEN_LABEL} – ${CLOSE_LABEL}</span></div>
     <form id="sub-form" class="field" style="gap:12px">
       ${uploadFields("f")}
       <button class="btn primary big" type="submit" id="f-btn">Submit for judging</button>
@@ -1254,7 +1267,7 @@ function renderLog(C) {
       <div class="d">${esc(d.toLocaleDateString(undefined, { weekday: "short" }))}<b>${d.getDate()}</b>${esc(d.toLocaleDateString(undefined, { month: "short" }))}</div>
       <div style="min-width:0"><h3>${esc(questTitle(q))}<small>${RARITY[q.rarity].label}</small></h3>
       ${!/^[\d.,:]/.test(q.n) ? `<div class="muted small">${esc(q.u)}</div>` : ""}
-      ${fins ? `<div class="fins">${fins}</div>` : `<div class="muted small">${i === 0 ? (isClosed() ? "Closed at 10 PM. No finishers." : "Open until 10 PM.") : "No finishers."}</div>`}</div>
+      ${fins ? `<div class="fins">${fins}</div>` : `<div class="muted small">${i === 0 ? (phase() === "before" ? `Opens at ${OPEN_LABEL}.` : phase() === "after" ? `Closed at ${CLOSE_LABEL}. No finishers.` : `Open until ${CLOSE_LABEL}.`) : "No finishers."}</div>`}</div>
     </div>`);
   }
   $("#days").innerHTML = out.join("");
@@ -1450,19 +1463,23 @@ function confetti() {
 
 /* ---------- countdown + day rollover ---------- */
 function tick() {
-  const now = new Date(), closed = isClosed();
-  const end = new Date(now); end.setHours(closed ? 24 : CLOSE_HOUR, 0, 0, 0);
+  const now = new Date(), ph = phase(), closed = ph !== "open";
+  const end = new Date(now);
+  if (ph === "before") end.setHours(OPEN_HOUR, 0, 0, 0);
+  else if (ph === "open") end.setHours(CLOSE_HOUR, 0, 0, 0);
+  else { end.setDate(end.getDate() + 1); end.setHours(OPEN_HOUR, 0, 0, 0); }
   const s = Math.max(0, Math.floor((end - now) / 1000));
   const hms = `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
   const el = document.getElementById("countdown");
-  if (el) el.textContent = closed ? "Closed" : hms;
+  if (el) el.textContent = hms;
   const lab = document.getElementById("countdown-label");
-  if (lab) lab.textContent = closed ? "Next quest in" : "Closes in";
+  if (lab) lab.textContent = ph === "before" ? "Opens in" : ph === "open" ? "Closes in" : "Next quest in";
   const nx = document.getElementById("next-quest");
   if (nx) nx.textContent = hms;
   const qEl = document.querySelector(".q-band");
-  if (qEl) qEl.style.setProperty("--dayp", (closed ? 100 : 100 * (1 - s / (CLOSE_HOUR * 3600))).toFixed(2) + "%");
-  if (closed !== S.closed) { S.closed = closed; scheduleRender(); }
+  const span = (CLOSE_HOUR - OPEN_HOUR) * 3600;
+  if (qEl) qEl.style.setProperty("--dayp", (ph === "before" ? 0 : ph === "after" ? 100 : 100 * (1 - s / span)).toFixed(2) + "%");
+  if (ph !== S.phase) { S.phase = ph; S.closed = closed; scheduleRender(); }
   const wEl = document.getElementById("week-countdown");
   if (wEl) {
     const wEnd = dateOf(shiftKey(weekStartKey(), 7)), ws = Math.max(0, Math.floor((wEnd - now) / 1000));
@@ -1637,7 +1654,7 @@ async function submitRun(p, coll, slot, replace) {
   if (!file && !linkRaw) return showErr("Add a video file or paste a link to your video.");
   if (linkRaw && !safeLink(linkRaw)) return showErr("Links need to start with https://");
   if (file && file.size > maxMB() * 1024 * 1024) return showErr(`That file is ${(file.size / 1048576).toFixed(0)} MB and the limit is ${maxMB()} MB. Trim it, record at a lower resolution, or paste a link instead.`);
-  if (coll === "subs" && isClosed()) return showErr("Today's quest closed at 10 PM. The next one opens at midnight.");
+  if (coll === "subs" && isClosed()) return showErr(phase() === "before" ? `Today's quest opens at ${OPEN_LABEL}.` : `Today's quest closed at ${CLOSE_LABEL}. The next one opens tomorrow at ${OPEN_LABEL}.`);
   S.busy = true; btn.disabled = true; btn.textContent = file ? "Uploading video…" : "Submitting…";
   try {
     let video = null;
@@ -1792,6 +1809,8 @@ async function bootSupabase() {
 }
 
 /* ---------- boot ---------- */
+document.querySelectorAll(".hours-open").forEach(e => (e.textContent = OPEN_LABEL));
+document.querySelectorAll(".hours-close").forEach(e => (e.textContent = CLOSE_LABEL));
 renderLibrary();
 render();
 async function boot() {
