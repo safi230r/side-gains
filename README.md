@@ -3,6 +3,7 @@
 Daily at-home calisthenics quests for a crew of friends.
 
 - **Daily quest:** everyone gets the same quest each day (Common → Legendary), one move a day, doable at home. It starts on the **starter** level (light and quick, about 2–5 minutes). When the crew is ready, set `level: "standard"` in `SIDEGAINS_CONFIG` for harder quests. Each quest is open for submissions from 12 PM to 10 PM, local time. To change the hours, edit `openHour` and `closeHour` (24-hour clock) in `SIDEGAINS_CONFIG` at the top of `side-gains.html`.
+- **Mystery drop:** the move stays hidden behind a locked crate until opening time. Then it's revealed with a slot-machine roll, with sound, haptics and confetti. The crate, app icon and burst artwork were generated in Figma.
 - **Video proof:** film your set and upload it. The rest of the crew votes on whether it counts.
 - **Scoring:** fastest approved finishers get bonus points (+50% / +25% / +10%), plus a streak bonus.
 - **Weekly race:** a leaderboard with a live chart of points from Monday to Sunday.
