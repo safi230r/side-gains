@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=side-gains.html">
 <title>Side Gains</title>
+<script>
+  // Keep the query and #hash so Supabase login and invite links still sign you in after the redirect.
+  location.replace("side-gains.html" + location.search + location.hash);
+</script>
+<noscript><meta http-equiv="refresh" content="0; url=side-gains.html"></noscript>
 </head>
 <body>
 <p><a href="side-gains.html">Open Side Gains</a></p>
