@@ -16,7 +16,7 @@ Two mystery workout packs a day for a crew of friends. Rip them, film them, beat
 - **Sunday ceremony** at 10 PM: podium, awards, red card, and a recap image to share.
 - **Winner's power:** last week's winner picks one future move in secret, or vetoes one live quest.
 - **Monthly seasons** with six ranks and a hall of fame.
-- **Profiles:** player card, pins, personal bests, card binder, muscle map, streak and freezes.
+- **Profiles:** profile picture, player card, pins, personal bests, card binder, muscle map, streak and freezes.
 - **Streak freeze:** every 7 days earns one, two at most. It covers a missed day by itself.
 - **Punishments:** pitch and vote; last place films it by the end of the next week or loses 100 points.
 - **Form library** with 3D demos, habits, water, box breathing.
@@ -29,6 +29,7 @@ Two mystery workout packs a day for a crew of friends. Rip them, film them, beat
 | `app.js` | Pages, storage, notifications |
 | `engine.js` | All the rules and scoring. No page code, so it can be tested |
 | `fx.js`, `show.js` | Visuals: lighting, 3D athletes, foil, pack rip, ceremony |
+| `photo.js` | Profile pictures: crop, zoom and shrink |
 | `video.js` | Shrinks and splits big videos |
 | `catalog.js` | Exercise poses, form cues, tips |
 | `app.css`, `img/` | Styling and the Figma artwork |

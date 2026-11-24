@@ -3,6 +3,7 @@ import * as E from "./engine.js";
 import * as FX from "./fx.js";
 import * as SHOW from "./show.js";
 import * as VID from "./video.js";
+import * as PHOTO from "./photo.js";
 import { FORM, ANIM, FLEX_PATH, ICON, HABITS, WATER_GOAL, TIPS } from "./catalog.js";
 const { RM, RCOL, PAL, sfx, pin, rankEm, stk, athCanvas } = FX;
 
@@ -36,7 +37,16 @@ const COLORS = ["#2f6bff", "#d6307f", "#0f9d6b", "#d9770a", "#8a4bff", "#0e8fb5"
 /* one colour per member, in joining order, so two people never share one until there are more than ten */
 let colorKey = null, colorMap = {};
 const colorOf = id => { if (colorKey !== S.members) { colorKey = S.members; colorMap = {}; Object.keys(S.members).sort((a, b) => (S.members[a].joined || 0) - (S.members[b].joined || 0) || (a < b ? -1 : 1)).forEach((m, i) => (colorMap[m] = COLORS[i % COLORS.length])); } return colorMap[id] || "#5a5d68"; };
-const avatar = (id, cls = "") => `<span class="av ${cls}" style="background:${colorOf(id)}" aria-hidden="true">${esc((nameOf(id)[0] || "?").toUpperCase())}</span>`;
+const avatar = (id, cls = "") => `<span class="av ${cls}" data-av="${esc(id)}" style="background-color:${colorOf(id)}" aria-hidden="true">${esc((nameOf(id)[0] || "?").toUpperCase())}</span>`;
+const picOf = id => { const p = S.members[id] && S.members[id].pic; return PHOTO.valid(p) ? p : ""; };
+/* pictures live in one stylesheet, so every avatar on the page changes at once without redrawing anything */
+let picsKey = null, picsCss = "";
+function paintPics() {
+  if (picsKey === S.members) return; picsKey = S.members;
+  const css = Object.keys(S.members).map(id => { const p = picOf(id); return p ? `.av[data-av="${CSS.escape(id)}"]{background-image:url("${p}");color:transparent}` : ""; }).join("\n");
+  if (css === picsCss) return; picsCss = css;
+  let el = $("#pics"); if (!el) { el = document.createElement("style"); el.id = "pics"; document.head.appendChild(el); } el.textContent = css;
+}
 const nameBtn = id => `<button type="button" class="namebtn" data-prof="${esc(id)}">${esc(nameOf(id))}${id === S.uid ? " (you)" : ""}</button>`;
 const ord = n => n + (["th", "st", "nd", "rd"][(n % 100 >> 3) ^ 1 && n % 10] || "th");
 const safeLink = u => (/^https:\/\/[^\s"'<>]+$/i.test(u || "") ? u : null);
@@ -87,7 +97,7 @@ function markSeen(qid) { S.ripped.add(qid); store.set("sg-rip-" + qid, "1"); }
 const fresh = () => S.mode !== "live" || (S.confirmed.members && S.confirmed.subs && S.confirmed.drops && S.confirmed.meta);
 
 function render() {
-  S.now = E.now();
+  S.now = E.now(); paintPics();
   const C = S.C = E.compute(S);
   if (!S.slot || !C.slots.some(s => s.qid === S.slot)) S.slot = pickSlot(C);
   const t = liveTint(C); FX.setTint(t[0], t[1]);
@@ -504,7 +514,7 @@ function renderMe(C) {
   const el = $("#v-me"), id = S.profile || S.uid, st = id && C.stats[id];
   if (!st) { if (keyed(el, "none" + S.mode)) el.innerHTML = `<div class="panel"><h2>Your player card</h2><p class="muted">Join the crew on the Drops tab and your card appears here.</p></div>` + rulesHTML(); return; }
   const own = id === S.uid, subs = C.subs.filter(s => s.uid === id).sort((a, b) => b.at - a.at);
-  if (!keyed(el, [id, S.allCards, nameOf(id), st, C.today, subs.map(s => [s.key, s.status, s.points, s.reacts.length]), own && S.isOwner])) return;
+  if (!keyed(el, [id, S.allCards, nameOf(id), st, C.today, subs.map(s => [s.key, s.status, s.points, s.reacts.length]), own && S.isOwner, !!picOf(id)])) return;
   const t = E.tierOf(st.season), L = E.levelOf(st.all), good = subs.filter(s => s.kind === "quest" && s.status === "approved");
   const week = Array.from({ length: 7 }, (_, i) => E.shiftKey(C.wk, i)), hit = new Set(good.map(s => s.date));
   const G = ["arms", "legs", "full", "core"], gm = Math.max(60, ...G.map(g => st.groups[g])), pt = (i, f) => { const a = -Math.PI / 2 + i * Math.PI / 2; return [130 + Math.cos(a) * 92 * f, 118 + Math.sin(a) * 92 * f]; };
@@ -513,7 +523,7 @@ function renderMe(C) {
   const start = E.shiftKey(C.wk, -77), cells = []; for (let i = 0; i < 84; i++) { const d = E.shiftKey(start, i); if (d > C.today) { cells.push(`<i style="visibility:hidden"></i>`); continue; } const n = good.filter(s => s.date === d).length, ice = st.frozen.includes(d); cells.push(`<i class="${d === C.today ? "today" : ""}" title="${esc(fmtDay(d))}: ${ice ? "frozen" : n + " finished"}" style="${ice ? "background:#8fdcff" : n ? `background:color-mix(in srgb,var(--signal) ${n > 1 ? 100 : 55}%,var(--mat-2))` : ""}"></i>`); }
   el.innerHTML = `
     ${own ? "" : `<button type="button" class="btn mini" style="justify-self:start" data-back>Back</button>`}
-    <div class="player holo" data-amp="${innerWidth > 700 ? .15 : .5}" style="--pa:url(img/card-${TIERART[t.i]}.webp);--c:${TIERCOL[t.i]}">${rankEm(t.i)}<div class="sig">${esc(nameOf(id))}</div><div class="lv">${t.label}, level ${L.level}</div><div class="meter" title="${st.all} of ${L.to}"><i style="--v:${L.frac}"></i></div><div class="facts"><span>Points<b>${st.all}</b></span><span>Quests<b>${st.countAll}</b></span><span>Firsts<b>${st.firstsAll}</b></span><span>Duels<b>${st.duelW}–${st.duelL}</b></span></div><span class="qc-glare"></span></div>
+    <div class="player holo" data-amp="${innerWidth > 700 ? .15 : .5}" style="--pa:url(img/card-${TIERART[t.i]}.webp);--c:${TIERCOL[t.i]}">${rankEm(t.i)}${own && isMember() ? `<button type="button" class="pic-btn" data-pic aria-label="${picOf(id) ? "Change" : "Add"} your profile picture">${avatar(id, "xxl")}<i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h3.5L9 5.5h6L16.5 8H20v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg></i></button>` : avatar(id, "xxl")}<div class="sig">${esc(nameOf(id))}</div><div class="lv">${t.label}, level ${L.level}</div><div class="meter" title="${st.all} of ${L.to}"><i style="--v:${L.frac}"></i></div><div class="facts"><span>Points<b>${st.all}</b></span><span>Quests<b>${st.countAll}</b></span><span>Firsts<b>${st.firstsAll}</b></span><span>Duels<b>${st.duelW}–${st.duelL}</b></span></div><span class="qc-glare"></span></div>
     <div class="cols"><div class="stack">
       <div class="panel"><div class="flamebox"><canvas data-fx="flame" data-v="${st.cur ? Math.min(1, .3 + st.cur / 14).toFixed(2) : 0}"></canvas><div><div class="huge">${st.cur}</div><p class="muted">day streak, best ${st.best}. ${st.freezes < E.FREEZE_MAX ? `Next freeze in ${st.toFreeze} day${st.toFreeze === 1 ? "" : "s"}.` : "Freezes full."}</p><div class="ices">${Array.from({ length: E.FREEZE_MAX }, (_, i) => pin(3).replace('class="pin"', `class="pin ${i < st.freezes ? "" : "off"}"`)).join("")}</div></div></div><div class="weekdots">${week.map(d => `<i class="${hit.has(d) ? "hit" : st.frozen.includes(d) ? "ice" : ""} ${d === C.today ? "now" : ""}">${esc(fmtDay(d, { weekday: "narrow" }))}</i>`).join("")}</div><p class="muted small">One quest a day keeps it alive. Every 7 days earns a freeze that saves a missed day by itself.</p></div>
       <div class="panel"><div class="panel-h"><h2>Pins</h2><span class="sub">${E.BADGES.filter(b => b.v(st) >= b.goal).length} of ${E.BADGES.length}</span></div><div class="pinboard">${E.BADGES.map((b, i) => { const v = b.v(st), got = v >= b.goal; return `<button type="button" class="pinb ${got ? "" : "off"}" data-pin="${i}" data-of="${esc(id)}">${pin(i)}${esc(b.n)}${got ? "" : `<span class="mt"><i style="width:${Math.min(100, v / b.goal * 100)}%"></i></span>`}</button>`; }).join("")}</div></div>
@@ -523,7 +533,7 @@ function renderMe(C) {
       <div class="panel"><h2>Personal bests</h2>${pbs.length ? `<div class="pbs">${pbs.map(([k, m]) => `<div>${athCanvas(k, { tint: GROUPCOL[E.MOVES[k][1]] })}<span><b>${esc(FORM[k].name)}</b><br><small>${val(m.total, m.hold)} lifetime</small></span><b class="v">${val(m.best || m.total, m.hold)}</b></div>`).join("")}</div>` : `<p class="muted">Finish a quest to set your first record.</p>`}</div>
       <div class="panel"><div class="panel-h"><h2>Videos</h2><span class="sub">Kept for two days</span></div>${subs.some(s => C.now < s.at + E.KEEP_MS) ? `<div class="vids">${subs.filter(s => C.now < s.at + E.KEEP_MS).slice(0, 12).map(s => `<button type="button" class="vid" data-watch="${esc(s.key)}" style="background:#111 url(img/card-${s.kind === "quest" ? s.quest.rarity : "epic"}.webp) center/cover">${s.video && !s.video.startsWith("sbp:") ? videoTag(s.video, 'muted playsinline preload="metadata"') : ""}<span>${esc(s.label)}${s.status === "rejected" ? " (no rep)" : ""}</span></button>`).join("")}</div>` : `<p class="muted">No videos from the last two days.</p>`}</div>
       <div class="panel"><h2>Last 12 weeks</h2><div class="heat"><div class="heat-wrap"><div class="heat-days">${["Mon", "", "Wed", "", "Fri", "", "Sun"].map(x => `<span>${x}</span>`).join("")}</div><div class="heat-grid">${cells.join("")}</div></div></div></div>
-      ${own ? `<div class="panel"><h2>Settings</h2><div class="row"><button type="button" class="btn" id="rename-btn">Change name</button><button type="button" class="btn" data-notif>Notifications</button>${S.sb ? `<button type="button" class="btn ghost" id="signout-btn">Sign out</button>` : ""}</div></div>` : ""}
+      ${own ? `<div class="panel"><h2>Settings</h2><div class="row"><button type="button" class="btn" id="rename-btn">Change name</button>${isMember() ? `<button type="button" class="btn" data-pic>${picOf(id) ? "Change picture" : "Add a picture"}</button>` : ""}<button type="button" class="btn" data-notif>Notifications</button>${S.sb ? `<button type="button" class="btn ghost" id="signout-btn">Sign out</button>` : ""}</div></div>` : ""}
     </div></div>
     ${own ? logHTML(C) + rulesHTML() : ""}`;
 }
@@ -600,6 +610,27 @@ function openModal(html) { $("#modal-box").innerHTML = html; $("#modal").hidden 
 function closeModal() { $("#modal").hidden = true; $("#modal-box").innerHTML = ""; }
 $("#modal").addEventListener("click", e => { if (e.target.id === "modal" || e.target.closest("[data-close]")) closeModal(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#modal").hidden) closeModal(); });
+function picDialog() {
+  S.crop = null; const has = !!picOf(S.uid);
+  openModal(`<h2>Profile picture</h2><div class="pic-edit"><div id="pc-now">${avatar(S.uid, "huge")}</div><canvas id="pc-stage" width="512" height="512" tabindex="0" role="img" aria-label="Your photo. Drag to move it, or use the arrow keys." hidden></canvas>
+    <label class="pic-zoom" id="pc-zoomrow" hidden><span class="lab">Zoom</span><input type="range" id="pc-zoom" min="1" max="4" step="0.01" value="1"></label><p class="muted small center" id="pc-hint">Everyone in the crew sees it next to your name.</p><p class="err" id="pc-err" role="alert" hidden></p></div>
+    <input type="file" id="pc-file" class="vh" tabindex="-1" aria-hidden="true" accept="image/jpeg,image/png,image/webp">
+    <div class="row end">${has ? `<button type="button" class="btn ghost" id="pc-remove">Remove picture</button>` : ""}<button type="button" class="btn" data-close>Cancel</button><button type="button" class="btn primary" id="pc-pick">Choose a photo</button><button type="button" class="btn primary" id="pc-save" hidden>Save</button></div>`);
+}
+async function picChosen(input) {
+  const file = input.files[0], stage = $("#pc-stage"), err = $("#pc-err"); input.value = ""; if (!file) return;
+  err.hidden = true;
+  try {
+    const crop = await PHOTO.cropper(stage, $("#pc-zoom"), file); if (!stage.isConnected) return;
+    S.crop = crop; stage.hidden = false; $("#pc-zoomrow").hidden = false; $("#pc-now").hidden = true; $("#pc-save").hidden = false;
+    $("#pc-hint").textContent = "Drag to move it. Pinch or use the slider to zoom."; const p = $("#pc-pick"); p.textContent = "Different photo"; p.classList.remove("primary");
+  } catch (e) { if (err.isConnected) { err.textContent = e.message; err.hidden = false; sfx.error(); } }
+}
+async function savePic(pic, btn, ok) {
+  if (!isMember()) return toast("Join the crew first."); btn.disabled = true;
+  const done = await safe(() => mine("members", m => { if (pic) m.pic = pic; else delete m.pic; return m; }), ok);
+  if (done) { S.crop = null; sfx.success(); scheduleRender(); closeModal(); } else btn.disabled = false;
+}
 function renameDialog() { openModal(`<h2>Your name</h2><form id="rename-form" class="field" style="gap:14px"><label for="r-name">Shown on the leaderboard and your card</label><input type="text" id="r-name" maxlength="24" required><div class="row end"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`); $("#r-name").value = nameOf(S.uid); }
 function customDialog() {
   const s = S.C.slots.find(x => x.qid === S.slot); if (!s || !s.quest) return; const q = E.baseQuest(S, s.qid);
@@ -695,6 +726,10 @@ document.addEventListener("click", async e => {
   if (at("[data-notif]") || at("#notif-btn")) return notifDialog();
   if (at("#sound-btn")) { FX.setSound(!FX.SOUND.on); $("#sound-btn").setAttribute("aria-pressed", String(FX.SOUND.on)); return; }
   if (at("#rename-btn")) return renameDialog();
+  if (at("[data-pic]")) return picDialog();
+  if (at("#pc-pick")) return $("#pc-file").click();
+  if ((t = at("#pc-save"))) { if (!S.crop) return; let p; try { p = S.crop(); } catch (err) { return toast(err.message); } return savePic(p, t, "Picture saved"); }
+  if ((t = at("#pc-remove"))) return savePic("", t, "Picture removed");
   if (at("#signout-btn")) { await S.sb.auth.signOut(); location.replace(location.origin + location.pathname); return; }
   if (at("#custom-btn")) return customDialog();
   if (at("#c-reset")) return safe(() => S.db.doc("quests/" + S.slot).delete(), "Back to the dropped quest").then(closeModal);
@@ -715,6 +750,7 @@ function setLevel(lv) {
   const r = card.getBoundingClientRect(); FX.chalk(r.left + r.width * .3, r.bottom - r.height * .3, 14, 1);
 }
 document.addEventListener("change", e => {
+  if (e.target.id === "pc-file") return picChosen(e.target);
   if (e.target.type === "file") e.target.closest(".drop").classList.toggle("has", !!e.target.files.length);
   if (e.target.dataset.np) { setPref(e.target.dataset.np, e.target.checked); e.target.checked ? sfx.on() : sfx.off(); }
   if (e.target.name === "type") { const m = $("#dl-move"); if (m) m.hidden = e.target.value !== "max"; }
