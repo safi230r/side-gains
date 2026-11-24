@@ -1,81 +1,85 @@
 # Side Gains
 
-Daily at-home calisthenics quests for a crew of friends.
+Two mystery workout packs a day for a crew of friends. Rip them, film them, beat each other.
 
-- **Daily quest:** everyone gets the same quest each day (Common → Legendary), one move a day, doable at home. It starts on the **starter** level (light and quick, about 2–5 minutes). When the crew is ready, set `level: "standard"` in `SIDEGAINS_CONFIG` for harder quests. Each quest is open for submissions from 12 PM to 10 PM, local time. To change the hours, edit `openHour` and `closeHour` (24-hour clock) in `SIDEGAINS_CONFIG` at the top of `side-gains.html`.
-- **Mystery drop:** the move stays hidden behind a shadowy athlete covered in drifting question marks until opening time. Then it's revealed with a slot-machine roll, with sound, haptics and confetti in the rarity's colours. The silhouette, app icon and other artwork were generated in Figma.
-- **Sound effects:** synthesized clicks, chimes and fanfares across the app. Mute them with the speaker button in the header.
-- **Notifications:** each person chooses, from the bell button, whether to get a phone notification when the quest drops and when someone submits a video. On iPhone, add the site to your Home Screen first.
-- **Video proof:** film your set and upload it. The rest of the crew votes on whether it counts.
-- **Scoring:** fastest approved finishers get bonus points (+50% / +25% / +10%), plus a streak bonus.
-- **Weekly race:** a leaderboard with a live chart of points from Monday to Sunday.
-- **Crew-voted punishments:** everyone pitches a punishment, the crew votes, and last place on the weekly board has to film it.
-- **Form library:** animated demos of every move, with form cues and what doesn't count.
-- **Life tab:** habit tracker, water glasses, box-breathing timer, posture reset and a tip of the day.
+**Try it without an account:** open `side-gains.html?demo`. It uses a made-up crew and sends nothing anywhere. Add `&now=2026-11-26T18:40:00Z` to pretend it's another moment, or `&few` for a crew of two.
 
-The whole app is one file, [`side-gains.html`](side-gains.html). There's no build step.
+## What's in it
 
-## How data is stored
+- **Two drops a day** at random times between 8 AM and 8:30 PM, at least 2½ hours apart. Both close at 10 PM. The database picks the times, and nobody can read them early, not even the admin.
+- **Foil packs:** swipe to tear one open, watch the slot machine, flip the card. Cards are Common, Rare, Epic or Legendary, with a live 3D athlete doing the move.
+- **Videos count straight away.** If anyone says "doesn't count" within 24 hours, with a reason, it's out. You can film it again until the quest closes.
+- **Easy, Normal and Hard** versions of every quest, with points to match.
+- **Stickers and comments** on videos.
+- **Duels:** race to the next drop, battle for points until Sunday, or max reps in 60 seconds. The winner takes 25, 50 or 100 of the loser's points.
+- **Crew shaker:** a weekly rep goal everyone fills together. **Squads** are shuffled every Monday once four people have joined.
+- **Sunday ceremony** at 10 PM: podium, awards, red card, and a recap image to share.
+- **Winner's power:** last week's winner picks one future move in secret, or vetoes one live quest.
+- **Monthly seasons** with six ranks and a hall of fame.
+- **Profiles:** player card, pins, personal bests, card binder, muscle map, streak and freezes.
+- **Streak freeze:** every 7 days earns one, two at most. It covers a missed day by itself.
+- **Punishments:** pitch and vote; last place films it by the end of the next week or loses 100 points.
+- **Form library** with 3D demos, habits, water, box breathing.
 
-The app has its own database, so it doesn't depend on any one person's device. It uses [Supabase](https://supabase.com)'s free tier:
+## Files
 
-| What | Where | Who can see it |
-| --- | --- | --- |
-| Members, submissions, votes, punishments, habits | Postgres table `docs` | Signed-in crew only |
-| Videos | Private Storage bucket `videos`, up to 50 MB per file | Signed-in crew only |
-| Accounts | Supabase Auth, username and password | Anyone with the link can create an account |
-| Notification subscriptions | `docs` rows with `coll = 'push'` | Only that person (and the server) |
+| File | What it is |
+| --- | --- |
+| `side-gains.html` | The page and its settings |
+| `app.js` | Pages, storage, notifications |
+| `engine.js` | All the rules and scoring. No page code, so it can be tested |
+| `fx.js`, `show.js` | Visuals: lighting, 3D athletes, foil, pack rip, ceremony |
+| `video.js` | Shrinks and splits big videos |
+| `catalog.js` | Exercise poses, form cues, tips |
+| `app.css`, `img/` | Styling and the Figma artwork |
+| `supabase-schema.sql` | Database setup for a new project |
+| `supabase-update-2.sql` | Only the changes, for a project that already ran the old schema |
+| `notify-function.ts` | The notification service. Generated: run `node tools/build-notify.mjs` after changing `engine.js` or `tools/notify-handler.ts` |
 
-Access rules (in [`supabase-schema.sql`](supabase-schema.sql)) make sure each person can only change their own entries and votes. Only admins can set custom quests.
+There's no build step for the site itself.
 
-> If the page has no database settings, it shows a read-only preview. When it's opened as a claude.ai artifact, it uses that platform's built-in storage instead.
+## Videos
 
-## Setup (about 10 minutes)
+- Up to **200 MB** each. Supabase's free plan refuses single files over 50 MB, so anything over 16 MB is first shrunk to 720p on the phone. If a device can't do that, the file is uploaded in parts and joined again when someone watches it.
+- **Deleted after two days** by an hourly clean-up. Results, points and cards stay.
 
-### 1. Create the database
-1. Make a free account at [supabase.com](https://supabase.com) and create a new project.
-2. Open **SQL Editor → New query**, paste the contents of [`supabase-schema.sql`](supabase-schema.sql), and click **Run**.
+## Settings
 
-### 2. Allow username sign-ups
-Go to **Authentication → Sign In / Providers**. Turn **on** "Allow new users to sign up" and turn **off** "Confirm email". People sign up with a username and password. Behind the scenes the username becomes `username@<your-github-domain>`, which never receives email.
+In `side-gains.html`:
 
-> There's no password reset by email. If someone forgets their password, delete them in **Authentication → Users** and let them sign up again, or set a new password there.
+- `level`: `"starter"` or `"standard"`.
+- `tz`: the crew's time zone. Drops hit everyone at the same moment.
+- `rejects`: how many "doesn't count" votes throw a video out. Default 1.
 
-### 3. Connect the page
-1. Go to **Project Settings → API** and copy the **Project URL** and the **anon public** key.
-2. Paste them into `side-gains.html` near the top:
-   ```js
-   window.SIDEGAINS_CONFIG = {
-     supabaseUrl: "https://YOUR-PROJECT.supabase.co",
-     supabaseAnonKey: "eyJ...",
-   };
-   ```
-   The anon key is safe to publish. The access rules in the database are what protect the data.
+To change the drop hours, edit `sg_plan` in the SQL and `CFG` in `engine.js` so they match.
 
-### 4. Put it online with GitHub Pages
-1. In this repo, go to **Settings → Pages**, choose **Deploy from a branch**, select `main` and `/ (root)`, then save.
-2. Your site will be at `https://<your-username>.github.io/<repo-name>/`.
-3. Back in Supabase, open **Authentication → URL Configuration**:
-   - Set **Site URL** to that address.
-   - Add `https://<your-username>.github.io/<repo-name>/side-gains.html` under **Redirect URLs**.
+## Setup
 
-### 5. Become the admin
-1. Open the site and create your account.
-2. In the Supabase SQL Editor, run this with your own username and domain:
-   ```sql
-   insert into public.admins (uid) select id from auth.users where email = 'yourname@<your-username>.github.io';
-   ```
-3. Reload the page. You'll see **Set a custom quest** on the quest card.
+### 1. Database
+Make a free project at [supabase.com](https://supabase.com), open **SQL Editor → New query**, paste `supabase-schema.sql` and run it. For a project that already runs the old version, run `supabase-update-2.sql` instead. The two-drop system starts the day after.
 
-### 6. Notifications (optional)
-1. The schema file already creates the key table and the 10-minute schedule.
-2. Go to **Edge Functions → Deploy a new function → Via editor**. Name it `notify`, paste [`notify-function.ts`](notify-function.ts), and deploy.
-3. In the function's **Settings**, turn **off** "Verify JWT". The function checks logins itself.
-4. [`sw.js`](sw.js), [`manifest.webmanifest`](manifest.webmanifest) and the `icon-*.png` files must sit next to `side-gains.html`.
+### 2. Sign-ups
+**Authentication → Sign In / Providers**: turn on "Allow new users to sign up" and turn off "Confirm email". People sign up with a username and password. There's no password reset by email; set a new one in **Authentication → Users**.
 
-## Free-tier limits to know about
-- **Storage:** 1 GB in total. That's roughly 50–100 short phone clips. Delete old videos from **Storage → videos** now and then, or paste YouTube or Drive links for long sets.
-- **Inactivity:** free projects pause after about a week with no activity. Daily use keeps it awake. If it does pause, you can restore it from the dashboard.
+### 3. Notification service
+**Edge Functions → Deploy a new function → Via editor**. Name it `notify`, paste `notify-function.ts`, deploy, then turn off "Verify JWT" in its settings. It sends the alerts and deletes old videos.
+
+### 4. Connect and publish
+Put your Project URL and anon key in `side-gains.html` (the anon key is safe to publish). In the SQL, change the project address in `sg_call`. Then publish the folder with GitHub Pages and add the address under **Authentication → URL Configuration**.
+
+### 5. Admin
+After creating your account, run this with your username and domain:
+```sql
+insert into public.admins (uid) select id from auth.users where email = 'yourname@<your-username>.github.io';
+```
+Reload and **Set a custom quest** appears on open quests.
+
+## Free-tier limits
+
+- **Storage:** 1 GB. With two-day deletion that's plenty for a small crew.
+- **Downloads:** 5 GB a month. Shrinking videos is what keeps this workable.
+- **Inactivity:** free projects pause after about a week without use.
 
 ## Design
-`figma-board.html` is the source for the Figma design system: colour tokens, rarity tiers, quest cards, the form library pose sheet and the burpee motion study.
+
+The Figma file "Side Gains — Design System" has a "v2 · Foil Season" page with the colours, type, card components, key screens and artwork.
