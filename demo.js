@@ -1,6 +1,7 @@
 /* Demo crew for trying the site without touching the real database: open side-gains.html?demo
    Optional: &now=2026-11-26T18:30:00Z pretends it's that moment. Everything lives in memory. */
 import * as E from "./engine.js";
+import * as VID from "./video.js";
 
 export function demo(S) {
   const solo = new URLSearchParams(location.search).has("few");
@@ -36,7 +37,14 @@ export function demo(S) {
   }
   for (const [id] of people) { const d = {}; for (let i = 0; i < 7; i++) d[E.shiftKey(today, -i)] = { sleep: r() < .7, stretch: r() < .5, protein: r() < .6, steps: r() < .6, water: Math.floor(r() * 9) }; D.habits[id] = { d }; }
   S.uid = "me"; S.isOwner = true; S.canWrite = true; S.demoUrls = {};
-  S.assets = { async upload(file) { const id = "demo:" + Math.random().toString(36).slice(2); S.demoUrls[id] = URL.createObjectURL(file); return { id }; } };
+  /* runs the real shrink step, then pretends to upload so the progress text can be seen */
+  S.assets = { async upload(file, { type, onStage = () => {} } = {}) {
+    const got = {};
+    await VID.send(file, type || file.type, { base: "demo", onStage, upload: async (path, blob, t, onBytes) => { for (let i = 1; i <= 10; i++) { await new Promise(r => setTimeout(r, 120)); onBytes(blob.size * i / 10); } got[path] = blob; } });
+    const id = "demo:" + Math.random().toString(36).slice(2), keys = Object.keys(got).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+    S.demoUrls[id] = URL.createObjectURL(new Blob(keys.map(k => got[k]), { type: "video/mp4" }));
+    return { id };
+  } };
   const ls = {}, emit = c => ls[c] && ls[c]({ docs: Object.entries(D[c]).map(([id, v]) => ({ id, exists: true, data: () => v })), metadata: { fromCache: false } });
   return {
     doc(path) { const [c, id] = path.split("/"); return { async set(v) { D[c][id] = JSON.parse(JSON.stringify(v)); setTimeout(() => emit(c), 30); }, async delete() { delete D[c][id]; setTimeout(() => emit(c), 30); } }; },

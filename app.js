@@ -751,7 +751,7 @@ function setLevel(lv) {
 }
 document.addEventListener("change", e => {
   if (e.target.id === "pc-file") return picChosen(e.target);
-  if (e.target.type === "file") e.target.closest(".drop").classList.toggle("has", !!e.target.files.length);
+  if (e.target.type === "file") { e.target.closest(".drop").classList.toggle("has", !!e.target.files.length); VID.warm(e.target.files[0]); }
   if (e.target.dataset.np) { setPref(e.target.dataset.np, e.target.checked); e.target.checked ? sfx.on() : sfx.off(); }
   if (e.target.name === "type") { const m = $("#dl-move"); if (m) m.hidden = e.target.value !== "max"; }
 });
@@ -856,13 +856,36 @@ function supabaseDb(sb) {
     } }; },
   };
 }
+/* the same request supabase-js makes for storage uploads, sent with XMLHttpRequest so we can show how far along it is */
+async function sendTracked(sb, path, blob, type, onBytes) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return { error: { message: "not signed in" } };
+  return new Promise(res => {
+    const x = new XMLHttpRequest();
+    x.open("POST", `${CONF.supabaseUrl}/storage/v1/object/videos/${path.split("/").map(encodeURIComponent).join("/")}`);
+    x.setRequestHeader("authorization", `Bearer ${session.access_token}`);
+    x.setRequestHeader("apikey", CONF.supabaseAnonKey);
+    x.setRequestHeader("content-type", type);
+    x.setRequestHeader("x-upsert", "false");
+    x.setRequestHeader("cache-control", "max-age=3600");
+    x.upload.onprogress = e => onBytes(e.loaded);
+    x.onload = () => {
+      if (x.status >= 200 && x.status < 300) return res({ error: null });
+      let m = `${x.status}`; try { const j = JSON.parse(x.responseText); m = `${j.statusCode || x.status} ${j.error || ""} ${j.message || ""}`; } catch (e) {}
+      res({ error: { message: m } });
+    };
+    x.onerror = x.ontimeout = () => res({ error: { message: "network error" } });
+    x.send(blob);
+  });
+}
 function supabaseAssets(sb) {
   const bad = error => ({ code: /exceed|too large|413|maximum/i.test(error.message) ? "too_large" : /mime|type/i.test(error.message) ? "unsupported_type" : /quota|limit/i.test(error.message) ? "quota_or_state" : "upstream_error", message: error.message });
   return { async upload(file, { type, onStage = () => {} }) {
     const base = `${S.uid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const id = await VID.send(file, type, { base, onStage, upload: async (path, blob, t) => {
+    const id = await VID.send(file, type, { base, onStage, upload: async (path, blob, t, onBytes = () => {}) => {
       for (let tries = 0; ; tries++) {
-        const { error } = await sb.storage.from("videos").upload(path, blob, { contentType: t, upsert: false });
+        onBytes(0);
+        const { error } = await sendTracked(sb, path, blob, t, onBytes);
         if (!error || (tries && /exists|duplicate/i.test(error.message))) return;
         const b = bad(error); if (b.code !== "upstream_error" || tries >= 2) throw b;
         await FX.sleep(1500 * (tries + 1));
